@@ -1,6 +1,6 @@
 # Carcassonne
 
-Versão digital do jogo de tabuleiro Carcassonne, feita como trabalho acadêmico de Orientação a Objetos.
+Versão digital do jogo de tabuleiro Carcassonne, feita como trabalho da disciplina Projeto de Software.
 
 ## Créditos
 
