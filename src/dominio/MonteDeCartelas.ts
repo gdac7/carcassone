@@ -55,4 +55,8 @@ export class MonteDeCartelas {
     estaVazio(): boolean {
         return this.cartelas.length === 0;
     }
+
+    getQuantidade(): number {
+        return this.cartelas.length;
+    }
 }

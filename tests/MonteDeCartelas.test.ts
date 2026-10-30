@@ -69,6 +69,13 @@ describe('MonteDeCartelas.puxarCartela', () => {
     expect(primeira).toBeDefined();
   });
 
+  test('a quantidade diminui a cada puxada', () => {
+    const monte = monteCriado();
+    expect(monte.getQuantidade()).toBe(71);
+    monte.puxarCartela();
+    expect(monte.getQuantidade()).toBe(70);
+  });
+
   test('puxar de um monte vazio é erro', () => {
     const monte = monteCriado();
     puxarTodas(monte);
