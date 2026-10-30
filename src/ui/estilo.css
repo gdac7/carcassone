@@ -536,13 +536,6 @@ kbd {
   cursor: pointer;
 }
 
-.credito {
-  margin: 8px 0 0;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  color: var(--pergaminho-apagado);
-}
-
 .dialogo .acoes {
   margin-top: 24px;
 }
