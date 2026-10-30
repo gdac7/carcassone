@@ -31,12 +31,12 @@ export class PontoBorda {
 
     oposta(): PontoBorda {
         // Posição i guarda o índice do ponto que encosta em i na cartela vizinha.
-        // N_O↔S_O, N↔S, N_L↔S_L, L_N↔O_N, L↔O, L_S↔O_S.
+        // N_O<->S_O, N<->S, N_L<->S_L, L_N<->O_N, L<->O, L_S<->O_S.
         const indiceDaOposta = [
-            8, 7, 6,   // N_O, N, N_L  → S_O, S, S_L
-            11, 10, 9, // L_N, L, L_S  → O_N, O, O_S
-            2, 1, 0,   // S_L, S, S_O  → N_L, N, N_O
-            5, 4, 3,   // O_S, O, O_N  → L_S, L, L_N
+            8, 7, 6,   // N_O, N, N_L  -> S_O, S, S_L
+            11, 10, 9, // L_N, L, L_S  -> O_N, O, O_S
+            2, 1, 0,   // S_L, S, S_O  -> N_L, N, N_O
+            5, 4, 3,   // O_S, O, O_N  -> L_S, L, L_N
         ];
         return PontoBorda.ORDEM[indiceDaOposta[this.indice]];
     }
