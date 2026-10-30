@@ -92,8 +92,11 @@ export class MenuInicial extends Phaser.Scene {
     // Fundo: cartelas aleatórias, desfocadas e escurecidas, deslizando devagar.
     private desenharFundo(): void {
         const nomes = [...new Set(Object.values(IMAGEM_POR_TIPO))];
-        const colunas = Math.ceil(this.scale.width / TAMANHO_CARTELA) + 4;
-        const linhas = Math.ceil(this.scale.height / TAMANHO_CARTELA) + 2;
+        // Área generosa, para continuar coberta se a janela for redimensionada ou maximizada.
+        const largura = Math.max(this.scale.width, window.screen.width, 2560);
+        const altura = Math.max(this.scale.height, window.screen.height, 1440);
+        const colunas = Math.ceil(largura / TAMANHO_CARTELA) + 4;
+        const linhas = Math.ceil(altura / TAMANHO_CARTELA) + 2;
 
         for (let x = -2; x < colunas; x++) {
             for (let y = -1; y < linhas; y++) {
@@ -103,7 +106,7 @@ export class MenuInicial extends Phaser.Scene {
             }
         }
         this.cameras.main.postFX?.addBlur(1, 2, 2, 1.2);
-        this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x1b130e, 0.55)
+        this.add.rectangle(0, 0, largura, altura, 0x1b130e, 0.55)
             .setOrigin(0).setScrollFactor(0);
 
         if (!MOVIMENTO_REDUZIDO) {
