@@ -25,6 +25,10 @@ input {
   color: inherit;
 }
 
+html {
+  scrollbar-color: var(--ouro-tenue) transparent;
+}
+
 html,
 body {
   margin: 0;
@@ -72,6 +76,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.icones-cabecalho {
+  display: flex;
+  gap: 4px;
 }
 
 .botao-icone {
@@ -280,9 +289,31 @@ kbd {
 
 .jogador .pontos {
   grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   font-size: 1.5rem;
   font-weight: 700;
+  line-height: 1.1;
   font-variant-numeric: lining-nums tabular-nums;
+}
+
+.jogador .pontos small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--pergaminho-apagado);
+}
+
+/* Destaca a pontuação que acabou de subir. */
+.jogador .pontos.subiu {
+  animation: subir 600ms ease-out;
+}
+
+@keyframes subir {
+  30% {
+    color: var(--ouro);
+    transform: scale(1.15);
+  }
 }
 
 .jogador .reserva {
@@ -516,8 +547,104 @@ kbd {
   margin-top: 24px;
 }
 
+/* Ajuda */
+
+.dialogo-ajuda {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.dialogo-ajuda h3 {
+  margin: 24px 0 10px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.dialogo-ajuda h3:first-of-type {
+  margin-top: 0;
+}
+
+.passos,
+.controles {
+  margin: 0;
+  padding-left: 1.25em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.45;
+}
+
+.tabela-rolagem {
+  overflow-x: auto;
+}
+
+.tabela-pontos {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.tabela-pontos th,
+.tabela-pontos td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(237, 227, 207, 0.1);
+}
+
+.tabela-pontos thead th {
+  font-weight: 500;
+  color: var(--pergaminho-apagado);
+  border-bottom-color: var(--ouro-tenue);
+}
+
+.tabela-pontos tbody th {
+  font-weight: 700;
+}
+
+/* No celular, cada zona vira um bloco com os rótulos ao lado dos valores. */
+@media (max-width: 560px) {
+  .tabela-pontos {
+    min-width: 0;
+  }
+
+  .tabela-pontos thead {
+    display: none;
+  }
+
+  .tabela-pontos tr {
+    display: block;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(237, 227, 207, 0.1);
+  }
+
+  .tabela-pontos th,
+  .tabela-pontos td {
+    display: block;
+    padding: 2px 0;
+    border: none;
+  }
+
+  .tabela-pontos td::before {
+    content: attr(data-rotulo) ': ';
+    color: var(--pergaminho-apagado);
+  }
+}
+
+.nota {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--pergaminho-apagado);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .cartao-menu {
+  .cartao-menu,
+  .jogador .pontos.subiu {
     animation: none;
   }
 }

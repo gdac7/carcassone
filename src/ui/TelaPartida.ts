@@ -16,6 +16,7 @@ export class TelaPartida extends Phaser.Scene {
     private monte = new MonteDeCartelas();
     private cartelasNaMesa = new Map<string, Cartela>(); // até a etapa 7 (Tabuleiro)
     private jogadores: Jogador[] = [];
+    private pontuacaoExibida = new Map<Jogador, number>();
     private cartelaAtual: Cartela | null = null;
     private fantasma!: Phaser.GameObjects.Image;
     private casasLivres!: Phaser.GameObjects.Graphics;
@@ -28,6 +29,7 @@ export class TelaPartida extends Phaser.Scene {
     // As imagens já foram carregadas pelo MenuInicial.
     init(dados: { jogadores: Jogador[] }): void {
         this.jogadores = dados.jogadores;
+        this.pontuacaoExibida = new Map();
         this.monte = new MonteDeCartelas();
         this.cartelasNaMesa = new Map();
         this.cartelaAtual = null;
@@ -47,6 +49,7 @@ export class TelaPartida extends Phaser.Scene {
         this.configurarArrastoEZoom();
         this.configurarColocacao();
         this.configurarGiros();
+        this.configurarAjuda();
 
         this.puxarCartela();
         this.exibirPlacar();
@@ -55,19 +58,34 @@ export class TelaPartida extends Phaser.Scene {
     exibirPlacar(): void {
         const lista = document.getElementById('lista-jogadores')!;
         lista.replaceChildren(...this.jogadores.map((jogador, i) => {
+            const pontos = jogador.getPontuacao();
+            const reserva = jogador.getQuantidadeNaReserva();
             const item = document.createElement('li');
             item.className = i === 0 ? 'jogador da-vez' : 'jogador';
             item.style.setProperty('--cor-jogador', COR_HEX[jogador.getCor()]);
             item.innerHTML = `
                 <span class="meeple" aria-hidden="true"></span>
                 <span class="nome"></span>
-                <span class="pontos"></span>
+                <span class="pontos"><span class="valor"></span><small>${pontos === 1 ? 'ponto' : 'pontos'}</small></span>
                 <span class="reserva"></span>`;
             item.querySelector('.nome')!.textContent = jogador.getNome();
-            item.querySelector('.pontos')!.textContent = String(jogador.getPontuacao());
-            item.querySelector('.reserva')!.textContent = `${jogador.getQuantidadeNaReserva()} seguidores`;
+            item.querySelector('.valor')!.textContent = String(pontos);
+            item.querySelector('.reserva')!.textContent = reserva === 1 ? '1 seguidor' : `${reserva} seguidores`;
+
+            const anterior = this.pontuacaoExibida.get(jogador);
+            if (anterior !== undefined && pontos > anterior) {
+                item.querySelector('.pontos')!.classList.add('subiu');
+            }
+            this.pontuacaoExibida.set(jogador, pontos);
             return item;
         }));
+    }
+
+    exibirAjuda(): void {
+        const dialogo = document.getElementById('ajuda') as HTMLDialogElement;
+        if (dialogo.open) return;
+        dialogo.showModal();
+        dialogo.scrollTop = 0; // o foco vai para o botão do fim e rolaria o texto até lá
     }
 
     private puxarCartela(): void {
@@ -190,9 +208,29 @@ export class TelaPartida extends Phaser.Scene {
         });
     }
 
+    private configurarAjuda(): void {
+        const dialogo = document.getElementById('ajuda') as HTMLDialogElement;
+        const abrir = document.getElementById('abrir-ajuda')!;
+        const fechar = document.getElementById('fechar-ajuda')!;
+        const aoAbrir = () => this.exibirAjuda();
+        const aoFechar = () => dialogo.close();
+
+        abrir.addEventListener('click', aoAbrir);
+        fechar.addEventListener('click', aoFechar);
+        this.input.keyboard?.on('keydown-H', () => {
+            if (!algumDialogoAberto()) this.exibirAjuda();
+        });
+
+        // A cena é recriada a cada partida; sem isso os cliques se acumulariam.
+        this.events.once('shutdown', () => {
+            abrir.removeEventListener('click', aoAbrir);
+            fechar.removeEventListener('click', aoFechar);
+        });
+    }
+
     private configurarGiros(): void {
         const girar = (vezes: number) => {
-            if (!this.cartelaAtual) return;
+            if (!this.cartelaAtual || algumDialogoAberto()) return;
             for (let i = 0; i < vezes; i++) this.cartelaAtual.girar();
             som.tocarGirar();
             this.atualizarCartelaDaVez(vezes === 1 ? -90 : 90);
@@ -255,6 +293,11 @@ export class TelaPartida extends Phaser.Scene {
         const ponto = this.cameras.main.getWorldPoint(ponteiro.x, ponteiro.y);
         return new Posicao(Math.round(ponto.x / TAMANHO_CARTELA), Math.round(ponto.y / TAMANHO_CARTELA));
     }
+}
+
+// Com um diálogo aberto, as teclas do jogo não devem agir no tabuleiro por trás dele.
+function algumDialogoAberto(): boolean {
+    return document.querySelector('dialog[open]') !== null;
 }
 
 function chaveDaImagem(cartela: Cartela): string {

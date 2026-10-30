@@ -13,12 +13,20 @@
       <aside id="painel" class="painel" hidden>
         <header class="cabecalho">
           <h1 class="titulo">Carcassonne</h1>
-          <button class="botao-icone" type="button" data-abrir-configuracoes
-                  aria-label="Configurações" title="Configurações">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.6 4.9-.1-2.8 2-1.6-2-3.4-2.4.9a8 8 0 0 0-2.4-1.4L15.3 2h-4l-.4 2.6c-.9.3-1.7.8-2.4 1.4l-2.4-.9-2 3.4 2 1.6a7.8 7.8 0 0 0 0 2.8l-2 1.6 2 3.4 2.4-.9c.7.6 1.5 1.1 2.4 1.4l.4 2.6h4l.4-2.6c.9-.3 1.7-.8 2.4-1.4l2.4.9 2-3.4-2-1.6Z" />
-            </svg>
-          </button>
+          <div class="icones-cabecalho">
+            <button id="abrir-ajuda" class="botao-icone" type="button"
+                    aria-label="Ajuda" title="Ajuda (H)">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 16.2a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6Zm1.4-5.1c-.6.4-.7.6-.7 1.2v.4h-2.2v-.6c0-1.2.5-1.9 1.4-2.5.8-.5 1.2-.8 1.2-1.5 0-.7-.6-1.2-1.4-1.2-.9 0-1.5.5-1.6 1.4H7.9C8 7.9 9.6 6.6 12 6.6c2.3 0 3.9 1.3 3.9 3.1 0 1.4-.8 2.2-1.9 2.9l-.6.5Z" />
+              </svg>
+            </button>
+            <button class="botao-icone" type="button" data-abrir-configuracoes
+                    aria-label="Configurações" title="Configurações">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.6 4.9-.1-2.8 2-1.6-2-3.4-2.4.9a8 8 0 0 0-2.4-1.4L15.3 2h-4l-.4 2.6c-.9.3-1.7.8-2.4 1.4l-2.4-.9-2 3.4 2 1.6a7.8 7.8 0 0 0 0 2.8l-2 1.6 2 3.4 2.4-.9c.7.6 1.5 1.1 2.4 1.4l.4 2.6h4l.4-2.6c.9-.3 1.7-.8 2.4-1.4l2.4.9 2-3.4-2-1.6Z" />
+              </svg>
+            </button>
+          </div>
         </header>
 
         <section class="mao" aria-labelledby="mao-titulo">
@@ -42,7 +50,7 @@
         </section>
 
         <section class="jogadores" aria-labelledby="jogadores-titulo">
-          <h2 id="jogadores-titulo">Jogadores</h2>
+          <h2 id="jogadores-titulo">Placar</h2>
           <ol id="lista-jogadores" class="lista-jogadores"></ol>
         </section>
 
@@ -89,6 +97,44 @@
       <p class="credito">Música: “Minstrel Guild”, de Kevin MacLeod (incompetech.com), licença CC BY 4.0.</p>
       <div class="acoes">
         <button id="fechar-configuracoes" class="botao botao-secundario" type="button">Fechar</button>
+      </div>
+    </dialog>
+
+    <dialog id="ajuda" class="dialogo dialogo-ajuda" aria-labelledby="ajuda-titulo">
+      <h2 id="ajuda-titulo" class="titulo-secao">Como jogar</h2>
+
+      <h3>Seu turno</h3>
+      <ol class="passos">
+        <li><strong>Coloque a cartela</strong> encostada em outra, com todos os lados combinando: estrada com estrada, cidade com cidade, campo com campo.</li>
+        <li><strong>Coloque um seguidor</strong>, se quiser, na cartela que acabou de colocar, numa zona que ainda não tenha nenhum.</li>
+        <li><strong>Conte os pontos</strong> das zonas que ficaram concluídas.</li>
+      </ol>
+
+      <h3>Pontuação</h3>
+      <div class="tabela-rolagem">
+        <table class="tabela-pontos">
+          <thead>
+            <tr><th scope="col">Zona</th><th scope="col">Concluída quando</th><th scope="col">Concluída</th><th scope="col">No fim, incompleta</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Estrada</th><td data-rotulo="Concluída quando">as duas pontas terminam ou ela fecha um laço</td><td data-rotulo="Concluída">1 por cartela</td><td data-rotulo="No fim, incompleta">1 por cartela</td></tr>
+            <tr><th scope="row">Cidade</th><td data-rotulo="Concluída quando">está toda cercada por muralhas</td><td data-rotulo="Concluída">2 por cartela + 2 por brasão</td><td data-rotulo="No fim, incompleta">1 por cartela + 1 por brasão</td></tr>
+            <tr><th scope="row">Mosteiro</th><td data-rotulo="Concluída quando">as 8 cartelas ao redor estão ocupadas</td><td data-rotulo="Concluída">9</td><td data-rotulo="No fim, incompleta">1 + 1 por vizinha</td></tr>
+            <tr><th scope="row">Campo</th><td data-rotulo="Concluída quando">nunca</td><td data-rotulo="Concluída">—</td><td data-rotulo="No fim, incompleta">3 por cidade concluída que toca</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="nota">Quem tem mais seguidores na zona leva todos os pontos; num empate, todos os empatados levam. Depois de pontuar, os seguidores voltam à reserva, menos os fazendeiros, que ficam até o fim.</p>
+
+      <h3>Controles</h3>
+      <ul class="controles">
+        <li><kbd>Q</kbd> <kbd>E</kbd> giram a cartela</li>
+        <li>Arraste para mover o tabuleiro; a roda do mouse aproxima</li>
+        <li><kbd>H</kbd> abre esta ajuda</li>
+      </ul>
+
+      <div class="acoes">
+        <button id="fechar-ajuda" class="botao botao-secundario" type="button">Voltar ao jogo</button>
       </div>
     </dialog>
 
