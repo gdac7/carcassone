@@ -1,0 +1,240 @@
+:root {
+  --nogueira: #3a2b22;
+  --nogueira-escura: #241a14;
+  --nogueira-funda: #1b130e;
+  --pergaminho: #ede3cf;
+  --pergaminho-apagado: #b9aa90;
+  --ouro: #c9a227;
+  --ouro-tenue: rgba(201, 162, 39, 0.35);
+  --azul-heraldico: #4a6fb5;
+
+  --fonte: 'Alegreya', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--nogueira);
+  color: var(--pergaminho);
+  font-family: var(--fonte);
+}
+
+.mesa {
+  display: flex;
+  height: 100vh;
+}
+
+.tabuleiro {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.tabuleiro:active {
+  cursor: grabbing;
+}
+
+/* Painel lateral */
+
+.painel {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 28px 26px;
+  overflow-y: auto;
+  background: var(--nogueira-escura);
+  border-left: 1px solid var(--ouro-tenue);
+}
+
+.titulo {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ouro);
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--pergaminho-apagado);
+}
+
+/* Cartela da vez */
+
+.moldura {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+  padding: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--nogueira-funda);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 6px;
+}
+
+.cartela-atual {
+  width: 156px;
+  height: 156px;
+  border-radius: 2px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+.brasao-atual {
+  position: absolute;
+  width: 22px;
+  pointer-events: none;
+  translate: -50% -50%;
+}
+
+.cartela-atual[hidden],
+.brasao-atual[hidden] {
+  display: none;
+}
+
+.giros {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.botao-giro {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 80ms ease;
+}
+
+.botao-giro:hover {
+  background: rgba(201, 162, 39, 0.12);
+}
+
+.botao-giro:active {
+  transform: scale(0.94);
+}
+
+.botao-giro:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.botao-giro:focus-visible {
+  outline: 2px solid var(--azul-heraldico);
+  outline-offset: 3px;
+}
+
+/* Os ícones originais são verdes; a máscara os redesenha em ouro. */
+.icone {
+  width: 20px;
+  height: 20px;
+  background: var(--ouro);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+.icone-esquerda {
+  mask-image: url('/icons/left.png');
+}
+
+.icone-direita {
+  mask-image: url('/icons/right.png');
+}
+
+.monte {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--pergaminho-apagado);
+}
+
+/* Jogadores */
+
+.lista-jogadores {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jogador {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+
+.jogador.da-vez {
+  background: rgba(237, 227, 207, 0.06);
+  border-left-color: var(--ouro);
+}
+
+.jogador .meeple {
+  grid-row: span 2;
+  width: 26px;
+  height: 26px;
+  background: var(--cor-jogador);
+  mask-image: url('/meeple/meeple_road_template.png');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+.jogador .nome {
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.jogador .pontos {
+  grid-row: span 2;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.jogador .reserva {
+  font-size: 0.85rem;
+  color: var(--pergaminho-apagado);
+}
+
+.dica {
+  margin: auto 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--pergaminho-apagado);
+}
+
+@media (max-width: 760px) {
+  .mesa {
+    flex-direction: column;
+  }
+
+  .painel {
+    width: auto;
+    max-height: 45vh;
+    border-left: none;
+    border-top: 1px solid var(--ouro-tenue);
+  }
+}

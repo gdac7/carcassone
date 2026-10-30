@@ -4,10 +4,42 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>carcassone</title>
+    <title>Carcassonne</title>
   </head>
   <body>
-    <div id="app"></div>
+    <main class="mesa">
+      <div id="tabuleiro" class="tabuleiro" aria-label="Tabuleiro"></div>
+
+      <aside class="painel">
+        <h1 class="titulo">Carcassonne</h1>
+
+        <section class="mao" aria-labelledby="mao-titulo">
+          <h2 id="mao-titulo">Cartela da vez</h2>
+          <div class="moldura">
+            <img id="cartela-atual" class="cartela-atual" alt="" width="100" height="100" />
+            <img id="brasao-atual" class="brasao-atual" src="/emblem.png" alt="" hidden />
+          </div>
+          <div class="giros">
+            <button id="girar-esquerda" class="botao-giro" type="button"
+                    aria-label="Girar para a esquerda" title="Girar para a esquerda (Q)">
+              <span class="icone icone-esquerda" aria-hidden="true"></span>
+            </button>
+            <button id="girar-direita" class="botao-giro" type="button"
+                    aria-label="Girar para a direita" title="Girar para a direita (E)">
+              <span class="icone icone-direita" aria-hidden="true"></span>
+            </button>
+          </div>
+          <p id="monte" class="monte"></p>
+        </section>
+
+        <section class="jogadores" aria-labelledby="jogadores-titulo">
+          <h2 id="jogadores-titulo">Jogadores</h2>
+          <ol id="lista-jogadores" class="lista-jogadores"></ol>
+        </section>
+
+        <p class="dica">Clique numa casa para colocar a cartela. Arraste o tabuleiro para mover e use a roda do mouse para aproximar.</p>
+      </aside>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
