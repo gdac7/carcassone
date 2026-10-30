@@ -201,6 +201,7 @@ export class TelaPartida extends Phaser.Scene {
         document.getElementById('girar-direita')!.onclick = () => girar(1);
         document.getElementById('girar-esquerda')!.onclick = () => girar(3);
         this.input.keyboard?.on('keydown-E', () => girar(1));
+        this.input.keyboard?.on('keydown-R', () => girar(1));
         this.input.keyboard?.on('keydown-Q', () => girar(3));
     }
 
