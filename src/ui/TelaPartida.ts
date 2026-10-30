@@ -18,7 +18,10 @@ export class TelaPartida extends Phaser.Scene {
     private jogadores: Jogador[] = [];
     private pontuacaoExibida = new Map<Jogador, number>();
     private cartelaAtual: Cartela | null = null;
-    private fantasma!: Phaser.GameObjects.Image;
+    // Prévia da cartela da vez sob o mouse: imagem e brasão giram juntos dentro do container.
+    private fantasma!: Phaser.GameObjects.Container;
+    private fantasmaImagem!: Phaser.GameObjects.Image;
+    private fantasmaBrasao!: Phaser.GameObjects.Image;
     private casasLivres!: Phaser.GameObjects.Graphics;
     private arrastando = false;
 
@@ -38,7 +41,10 @@ export class TelaPartida extends Phaser.Scene {
     create(): void {
         document.getElementById('painel')!.hidden = false;
         this.casasLivres = this.add.graphics();
-        this.fantasma = this.add.image(0, 0, '__DEFAULT').setAlpha(0.6).setVisible(false).setDepth(10);
+        this.fantasmaImagem = this.add.image(0, 0, '__DEFAULT');
+        this.fantasmaBrasao = this.add.image(0, 0, 'brasao').setScale(0.6).setVisible(false);
+        this.fantasma = this.add.container(0, 0, [this.fantasmaImagem, this.fantasmaBrasao])
+            .setAlpha(0.6).setVisible(false).setDepth(10);
 
         this.monte.criarCartelasPadrao();
         this.monte.embaralhar();
@@ -269,15 +275,19 @@ export class TelaPartida extends Phaser.Scene {
         }
         texto.textContent = restantes === 1 ? '1 cartela no monte' : `${restantes} cartelas no monte`;
 
+        this.fantasmaImagem.setTexture(chaveDaImagem(this.cartelaAtual));
+        this.fantasmaBrasao.setVisible(posicaoBrasao !== null);
+        if (posicaoBrasao) {
+            this.fantasmaBrasao.setPosition(posicaoBrasao[0] * TAMANHO_CARTELA, posicaoBrasao[1] * TAMANHO_CARTELA);
+        }
+
         if (anguloDeSaida !== 0 && DURACAO > 0) {
             imagem.animate(
                 [{ transform: `rotate(${anguloDeSaida}deg)` }, { transform: 'rotate(0deg)' }],
                 { duration: DURACAO, easing: 'ease-out' },
             );
-            this.fantasma.setTexture(chaveDaImagem(this.cartelaAtual)).setAngle(anguloDeSaida);
+            this.fantasma.setAngle(anguloDeSaida);
             this.tweens.add({ targets: this.fantasma, angle: 0, duration: DURACAO, ease: 'Quad.Out' });
-        } else {
-            this.fantasma.setTexture(chaveDaImagem(this.cartelaAtual));
         }
     }
 
