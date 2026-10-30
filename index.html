@@ -10,8 +10,16 @@
     <main class="mesa">
       <div id="tabuleiro" class="tabuleiro" aria-label="Tabuleiro"></div>
 
-      <aside class="painel">
-        <h1 class="titulo">Carcassonne</h1>
+      <aside id="painel" class="painel" hidden>
+        <header class="cabecalho">
+          <h1 class="titulo">Carcassonne</h1>
+          <button class="botao-icone" type="button" data-abrir-configuracoes
+                  aria-label="Configurações" title="Configurações">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.6 4.9-.1-2.8 2-1.6-2-3.4-2.4.9a8 8 0 0 0-2.4-1.4L15.3 2h-4l-.4 2.6c-.9.3-1.7.8-2.4 1.4l-2.4-.9-2 3.4 2 1.6a7.8 7.8 0 0 0 0 2.8l-2 1.6 2 3.4 2.4-.9c.7.6 1.5 1.1 2.4 1.4l.4 2.6h4l.4-2.6c.9-.3 1.7-.8 2.4-1.4l2.4.9 2-3.4-2-1.6Z" />
+            </svg>
+          </button>
+        </header>
 
         <section class="mao" aria-labelledby="mao-titulo">
           <h2 id="mao-titulo">Cartela da vez</h2>
@@ -40,6 +48,50 @@
         <p class="dica">Clique numa casa para colocar a cartela. Arraste o tabuleiro para mover e use a roda do mouse para aproximar.</p>
       </aside>
     </main>
+
+    <div id="menu" class="menu" hidden>
+      <section id="tela-inicio" class="cartao-menu">
+        <h1 class="titulo-menu">Carcassonne</h1>
+        <p class="subtitulo">Cidades, estradas e mosteiros no sul da França medieval.</p>
+        <div class="acoes">
+          <button id="jogar" class="botao botao-principal" type="button">Jogar</button>
+          <button class="botao botao-secundario" type="button" data-abrir-configuracoes>Configurações</button>
+        </div>
+      </section>
+
+      <section id="tela-jogadores" class="cartao-menu" hidden>
+        <h2 class="titulo-secao">Quem vai jogar?</h2>
+        <fieldset class="quantidade">
+          <legend>Quantidade de jogadores</legend>
+          <label><input type="radio" name="quantidade" value="2" checked /><span>2</span></label>
+          <label><input type="radio" name="quantidade" value="3" /><span>3</span></label>
+          <label><input type="radio" name="quantidade" value="4" /><span>4</span></label>
+          <label><input type="radio" name="quantidade" value="5" /><span>5</span></label>
+        </fieldset>
+        <ol id="nomes-jogadores" class="nomes-jogadores"></ol>
+        <div class="acoes acoes-lado-a-lado">
+          <button id="voltar" class="botao botao-secundario" type="button">Voltar</button>
+          <button id="comecar" class="botao botao-principal" type="button">Começar partida</button>
+        </div>
+      </section>
+    </div>
+
+    <dialog id="configuracoes" class="dialogo" aria-labelledby="configuracoes-titulo">
+      <h2 id="configuracoes-titulo" class="titulo-secao">Configurações</h2>
+      <label class="controle">
+        <span>Música</span>
+        <input id="volume-musica" type="range" min="0" max="100" />
+      </label>
+      <label class="controle">
+        <span>Efeitos sonoros</span>
+        <input id="volume-efeitos" type="range" min="0" max="100" />
+      </label>
+      <p class="credito">Música: “Minstrel Guild”, de Kevin MacLeod (incompetech.com), licença CC BY 4.0.</p>
+      <div class="acoes">
+        <button id="fechar-configuracoes" class="botao botao-secundario" type="button">Fechar</button>
+      </div>
+    </dialog>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

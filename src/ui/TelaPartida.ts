@@ -1,11 +1,10 @@
 import Phaser from 'phaser';
 import { Cartela } from '../dominio/Cartela';
-import { Cor } from '../dominio/Cor';
 import type { Jogador } from '../dominio/Jogador';
-import { JogadorHumano } from '../dominio/JogadorHumano';
 import { MonteDeCartelas } from '../dominio/MonteDeCartelas';
 import { Posicao } from '../dominio/Posicao';
 import { COR_HEX, IMAGEM_POR_TIPO, MOVIMENTO_REDUZIDO, POSICAO_DO_PONTO, TAMANHO_CARTELA } from './aparencia';
+import { som } from './Som';
 
 const DURACAO = MOVIMENTO_REDUZIDO ? 0 : 180;
 const ZOOM_MIN = 0.35;
@@ -14,12 +13,9 @@ const DISTANCIA_PARA_ARRASTAR = 5;
 
 // Provisório até a etapa 9: a cena usa o domínio diretamente; depois passará a observar o Jogo.
 export class TelaPartida extends Phaser.Scene {
-    private readonly monte = new MonteDeCartelas();
-    private readonly cartelasNaMesa = new Map<string, Cartela>(); // até a etapa 7 (Tabuleiro)
-    private readonly jogadores: Jogador[] = [
-        new JogadorHumano('Jogador 1', Cor.AZUL),
-        new JogadorHumano('Jogador 2', Cor.VERMELHO),
-    ];
+    private monte = new MonteDeCartelas();
+    private cartelasNaMesa = new Map<string, Cartela>(); // até a etapa 7 (Tabuleiro)
+    private jogadores: Jogador[] = [];
     private cartelaAtual: Cartela | null = null;
     private fantasma!: Phaser.GameObjects.Image;
     private casasLivres!: Phaser.GameObjects.Graphics;
@@ -29,16 +25,16 @@ export class TelaPartida extends Phaser.Scene {
         super('TelaPartida');
     }
 
-    preload(): void {
-        for (const nome of new Set(Object.values(IMAGEM_POR_TIPO))) {
-            for (let rotacao = 0; rotacao < 4; rotacao++) {
-                this.load.image(`${nome}${rotacao}`, `tiles/${nome}${rotacao}.png`);
-            }
-        }
-        this.load.image('brasao', 'emblem.png');
+    // As imagens já foram carregadas pelo MenuInicial.
+    init(dados: { jogadores: Jogador[] }): void {
+        this.jogadores = dados.jogadores;
+        this.monte = new MonteDeCartelas();
+        this.cartelasNaMesa = new Map();
+        this.cartelaAtual = null;
     }
 
     create(): void {
+        document.getElementById('painel')!.hidden = false;
         this.casasLivres = this.add.graphics();
         this.fantasma = this.add.image(0, 0, '__DEFAULT').setAlpha(0.6).setVisible(false).setDepth(10);
 
@@ -46,7 +42,8 @@ export class TelaPartida extends Phaser.Scene {
         this.monte.embaralhar();
         this.colocarNaMesa(this.monte.retirarCartelaInicial(), new Posicao(0, 0), false);
 
-        this.cameras.main.centerOn(0, 0);
+        this.centralizarNaAreaVisivel();
+        this.manterCentroAoRedimensionar();
         this.configurarArrastoEZoom();
         this.configurarColocacao();
         this.configurarGiros();
@@ -123,6 +120,29 @@ export class TelaPartida extends Phaser.Scene {
         }
     }
 
+    // O painel cobre parte do tabuleiro: a cartela inicial fica no centro do que sobra visível.
+    private centralizarNaAreaVisivel(): void {
+        const camera = this.cameras.main;
+        const painel = document.getElementById('painel')!.getBoundingClientRect();
+        camera.centerOn(0, 0);
+        if (painel.left > 0) {
+            camera.scrollX += painel.width / 2;
+        } else {
+            camera.scrollY += painel.height / 2;
+        }
+    }
+
+    // Quando a janela muda de tamanho, o centro visível do tabuleiro continua o mesmo.
+    private manterCentroAoRedimensionar(): void {
+        const aoRedimensionar = (tamanho: Phaser.Structs.Size, _base: unknown, _tela: unknown,
+            larguraAnterior: number, alturaAnterior: number) => {
+            this.cameras.main.scrollX += (larguraAnterior - tamanho.width) / 2;
+            this.cameras.main.scrollY += (alturaAnterior - tamanho.height) / 2;
+        };
+        this.scale.on('resize', aoRedimensionar);
+        this.events.once('shutdown', () => this.scale.off('resize', aoRedimensionar));
+    }
+
     private configurarArrastoEZoom(): void {
         const camera = this.cameras.main;
 
@@ -165,6 +185,7 @@ export class TelaPartida extends Phaser.Scene {
             if (this.cartelasNaMesa.has(casa.chave())) return;
 
             this.colocarNaMesa(this.cartelaAtual, casa, true);
+            som.tocarColocar();
             this.puxarCartela();
         });
     }
@@ -173,11 +194,12 @@ export class TelaPartida extends Phaser.Scene {
         const girar = (vezes: number) => {
             if (!this.cartelaAtual) return;
             for (let i = 0; i < vezes; i++) this.cartelaAtual.girar();
+            som.tocarGirar();
             this.atualizarCartelaDaVez(vezes === 1 ? -90 : 90);
         };
 
-        document.getElementById('girar-direita')!.addEventListener('click', () => girar(1));
-        document.getElementById('girar-esquerda')!.addEventListener('click', () => girar(3));
+        document.getElementById('girar-direita')!.onclick = () => girar(1);
+        document.getElementById('girar-esquerda')!.onclick = () => girar(3);
         this.input.keyboard?.on('keydown-E', () => girar(1));
         this.input.keyboard?.on('keydown-Q', () => girar(3));
     }

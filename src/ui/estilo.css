@@ -15,6 +15,16 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
 html,
 body {
   margin: 0;
@@ -26,13 +36,13 @@ body {
 }
 
 .mesa {
-  display: flex;
   height: 100vh;
 }
 
+/* O tabuleiro ocupa a tela toda; o painel fica por cima, à direita, como uma bandeja sobre a mesa. */
 .tabuleiro {
-  flex: 1;
-  min-width: 0;
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   cursor: grab;
 }
@@ -44,8 +54,11 @@ body {
 /* Painel lateral */
 
 .painel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: 300px;
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -53,6 +66,45 @@ body {
   overflow-y: auto;
   background: var(--nogueira-escura);
   border-left: 1px solid var(--ouro-tenue);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.botao-icone {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.botao-icone svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--pergaminho-apagado);
+  transition: fill 120ms ease;
+}
+
+.botao-icone:hover {
+  background: rgba(201, 162, 39, 0.12);
+}
+
+.botao-icone:hover svg {
+  fill: var(--ouro);
+}
+
+.botao-icone:focus-visible {
+  outline: 2px solid var(--azul-heraldico);
+  outline-offset: 2px;
 }
 
 .titulo {
@@ -97,11 +149,6 @@ h2 {
   width: 22px;
   pointer-events: none;
   translate: -50% -50%;
-}
-
-.cartela-atual[hidden],
-.brasao-atual[hidden] {
-  display: none;
 }
 
 .giros {
@@ -192,14 +239,18 @@ h2 {
   border-left-color: var(--ouro);
 }
 
-.jogador .meeple {
-  grid-row: span 2;
+.meeple {
   width: 26px;
   height: 26px;
+  flex-shrink: 0;
   background: var(--cor-jogador);
   mask-image: url('/meeple/meeple_road_template.png');
   mask-size: contain;
   mask-repeat: no-repeat;
+}
+
+.jogador .meeple {
+  grid-row: span 2;
 }
 
 .jogador .nome {
@@ -226,12 +277,242 @@ h2 {
   color: var(--pergaminho-apagado);
 }
 
-@media (max-width: 760px) {
-  .mesa {
-    flex-direction: column;
-  }
+/* Menu inicial */
 
+.menu {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.cartao-menu {
+  width: min(460px, 100%);
+  padding: 44px 48px 40px;
+  text-align: center;
+  background: rgba(36, 26, 20, 0.94);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: surgir 260ms ease-out;
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.titulo-menu {
+  margin: 0;
+  font-size: clamp(2.75rem, 7vw, 4rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ouro);
+}
+
+.subtitulo {
+  margin: 14px 0 0;
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--pergaminho-apagado);
+}
+
+.titulo-secao {
+  margin: 0 0 20px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--pergaminho);
+}
+
+.acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.acoes-lado-a-lado {
+  flex-direction: row;
+}
+
+.acoes-lado-a-lado .botao-principal {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.botao {
+  padding: 12px 28px;
+  font-size: 1.15rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.botao:active {
+  transform: scale(0.98);
+}
+
+.botao:focus-visible {
+  outline: 2px solid var(--azul-heraldico);
+  outline-offset: 3px;
+}
+
+.botao-principal {
+  color: var(--nogueira-funda);
+  background: var(--ouro);
+  border: 1px solid var(--ouro);
+}
+
+.botao-principal:hover {
+  background: #d9b33a;
+}
+
+.botao-secundario {
+  background: transparent;
+  border: 1px solid var(--ouro-tenue);
+}
+
+.botao-secundario:hover {
+  border-color: var(--ouro);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.quantidade {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.quantidade legend {
+  width: 100%;
+  margin-bottom: 12px;
+  color: var(--pergaminho-apagado);
+}
+
+.quantidade input {
+  position: absolute;
+  opacity: 0;
+}
+
+.quantidade span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.quantidade span:hover {
+  background: rgba(201, 162, 39, 0.12);
+}
+
+.quantidade input:checked + span {
+  color: var(--nogueira-funda);
+  background: var(--ouro);
+  border-color: var(--ouro);
+}
+
+.quantidade input:focus-visible + span {
+  outline: 2px solid var(--azul-heraldico);
+  outline-offset: 3px;
+}
+
+.nomes-jogadores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nomes-jogadores li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nomes-jogadores input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 1.05rem;
+  background: var(--nogueira-funda);
+  border: 1px solid rgba(237, 227, 207, 0.15);
+  border-radius: 4px;
+}
+
+.nomes-jogadores input::placeholder {
+  color: var(--pergaminho-apagado);
+  opacity: 0.7;
+}
+
+.nomes-jogadores input:focus-visible {
+  outline: none;
+  border-color: var(--ouro);
+}
+
+/* Configurações */
+
+.dialogo {
+  width: min(400px, calc(100% - 32px));
+  padding: 32px 36px;
+  color: var(--pergaminho);
+  background: var(--nogueira-escura);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.dialogo::backdrop {
+  background: rgba(27, 19, 14, 0.6);
+}
+
+.controle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.controle input {
+  accent-color: var(--ouro);
+  cursor: pointer;
+}
+
+.credito {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--pergaminho-apagado);
+}
+
+.dialogo .acoes {
+  margin-top: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cartao-menu {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
   .painel {
+    top: auto;
+    left: 0;
     width: auto;
     max-height: 45vh;
     border-left: none;
