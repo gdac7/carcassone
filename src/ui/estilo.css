@@ -205,8 +205,28 @@ h2 {
   mask-image: url('/icons/right.png');
 }
 
+.atalho {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--pergaminho-apagado);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 4px;
+  font-family: var(--fonte);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--pergaminho);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 3px;
+}
+
 .monte {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   text-align: center;
   font-size: 0.95rem;
   color: var(--pergaminho-apagado);
