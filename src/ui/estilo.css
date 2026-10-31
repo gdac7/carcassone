@@ -666,6 +666,63 @@ kbd {
   border-color: var(--ouro);
 }
 
+/* Partidas salvas */
+
+.partidas-salvas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  margin: 20px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.partida-salva {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 10px 14px;
+  text-align: left;
+  background: var(--petroleo-fundo);
+  border: 1px solid var(--linha);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.partida-salva:hover {
+  border-color: var(--ouro-tenue);
+  background: var(--realce);
+}
+
+.partida-salva:focus-visible {
+  outline: 2px solid var(--ouro);
+  outline-offset: 2px;
+}
+
+.partida-salva .data {
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.partida-salva .rodada {
+  align-self: center;
+  grid-row: span 2;
+  font-size: 0.9rem;
+  color: var(--ouro);
+}
+
+.partida-salva .quem {
+  overflow: hidden;
+  font-size: 0.9rem;
+  color: var(--salvia);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* Configurações */
 
 .dialogo {

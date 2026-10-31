@@ -87,6 +87,7 @@
         <h1 class="titulo-menu">Carcassonne</h1>
         <div class="acoes">
           <button id="jogar" class="botao botao-principal" type="button">Jogar</button>
+          <button id="continuar" class="botao botao-secundario" type="button" hidden>Continuar partida</button>
           <button class="botao botao-secundario" type="button" data-abrir-configuracoes>Configurações</button>
         </div>
       </section>
@@ -104,6 +105,16 @@
         <div class="acoes acoes-lado-a-lado">
           <button id="voltar" class="botao botao-secundario" type="button">Voltar</button>
           <button id="comecar" class="botao botao-principal" type="button">Começar partida</button>
+        </div>
+      </section>
+
+      <section id="tela-continuar" class="cartao-menu" hidden>
+        <h2 class="titulo-secao">Continuar partida</h2>
+        <p class="nota">As partidas são salvas sozinhas a cada jogada. Escolha uma para continuar de onde parou.</p>
+        <ol id="partidas-salvas" class="partidas-salvas"></ol>
+        <p id="erro-carregar" class="aviso" role="status" hidden>Não foi possível abrir esta partida.</p>
+        <div class="acoes">
+          <button id="voltar-continuar" class="botao botao-secundario" type="button">Voltar</button>
         </div>
       </section>
     </div>

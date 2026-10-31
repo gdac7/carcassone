@@ -7,12 +7,16 @@ import { Jogo } from '../dominio/Jogo';
 import type { EstrategiaIA } from '../servicos/EstrategiaIA';
 import { IADificil } from '../servicos/IADificil';
 import { IAFacil } from '../servicos/IAFacil';
+import { RepositorioLocal } from '../servicos/RepositorioLocal';
+import type { RepositorioPartida } from '../servicos/RepositorioPartida';
+import type { PartidaSalva } from '../servicos/SerializadorPartida';
 import { COR_HEX, IMAGEM_POR_TIPO, MOVIMENTO_REDUZIDO, TAMANHO_CARTELA } from './aparencia';
 import { som } from './Som';
 
 const CORES_EM_ORDEM = [Cor.AZUL, Cor.VERMELHO, Cor.VERDE, Cor.AMARELO, Cor.PRETO];
 
 export class MenuInicial extends Phaser.Scene {
+    private repositorio: RepositorioPartida = new RepositorioLocal();
     private quantidade = 2;
     private reiniciar = false;
 
@@ -43,6 +47,7 @@ export class MenuInicial extends Phaser.Scene {
     create(): void {
         this.desenharFundo();
         this.ligarMenu();
+        this.listarPartidasSalvas();
         this.mostrar('tela-inicio');
         document.getElementById('menu')!.hidden = false;
         document.addEventListener('pointerdown', () => som.iniciarMusica(), { once: true });
@@ -72,7 +77,22 @@ export class MenuInicial extends Phaser.Scene {
     // MenuInicial cria o Jogo; a TelaPartida se registra como observadora e começa a partida.
     iniciarJogo(): void {
         document.getElementById('menu')!.hidden = true;
-        this.scene.start('TelaPartida', { jogo: new Jogo(), jogadores: this.definirJogadores() });
+        this.scene.start('TelaPartida', { jogo: new Jogo(), jogadores: this.definirJogadores(), repositorio: this.repositorio });
+    }
+
+    // O repositório recria o Jogo repetindo as jogadas salvas; a TelaPartida continua dali.
+    carregarJogo(id: string): void {
+        let jogo: Jogo;
+        try {
+            jogo = this.repositorio.carregar(id);
+        } catch {
+            document.getElementById('erro-carregar')!.hidden = false;
+            return;
+        }
+        // Assim "Reiniciar" na partida carregada começa outra com os mesmos jogadores.
+        this.preencherFormulario(jogo.getJogadores());
+        document.getElementById('menu')!.hidden = true;
+        this.scene.start('TelaPartida', { jogo, repositorio: this.repositorio });
     }
 
     // onclick/onchange (e não addEventListener): a cena é recriada ao voltar da partida e não pode acumular cliques.
@@ -80,6 +100,8 @@ export class MenuInicial extends Phaser.Scene {
         document.getElementById('jogar')!.onclick = () => this.mostrar('tela-jogadores');
         document.getElementById('voltar')!.onclick = () => this.mostrar('tela-inicio');
         document.getElementById('comecar')!.onclick = () => this.iniciarJogo();
+        document.getElementById('continuar')!.onclick = () => this.mostrar('tela-continuar');
+        document.getElementById('voltar-continuar')!.onclick = () => this.mostrar('tela-inicio');
 
         document.querySelectorAll<HTMLInputElement>('input[name="quantidade"]').forEach((opcao) => {
             opcao.onchange = () => {
@@ -124,6 +146,44 @@ export class MenuInicial extends Phaser.Scene {
         }));
     }
 
+    // "Continuar partida" só aparece quando há alguma salva.
+    private listarPartidasSalvas(): void {
+        const partidas = this.repositorio.listar();
+        document.getElementById('continuar')!.hidden = partidas.length === 0;
+        document.getElementById('erro-carregar')!.hidden = true;
+        document.getElementById('partidas-salvas')!.replaceChildren(...partidas.map((partida) => {
+            const item = document.createElement('li');
+            const botao = document.createElement('button');
+            botao.type = 'button';
+            botao.className = 'partida-salva';
+            botao.innerHTML = '<span class="data"></span><span class="rodada"></span><span class="quem"></span>';
+            botao.querySelector('.data')!.textContent = descreverData(partida);
+            botao.querySelector('.rodada')!.textContent = `rodada ${partida.rodada}`;
+            botao.querySelector('.quem')!.textContent = partida.jogadores.join(', ');
+            botao.onclick = () => this.carregarJogo(partida.id);
+            item.append(botao);
+            return item;
+        }));
+    }
+
+    // No formulário, a cor vem da linha; por isso os jogadores voltam na ordem das cores, e não na sorteada.
+    private preencherFormulario(jogadoresDaPartida: Jogador[]): void {
+        const jogadores = [...jogadoresDaPartida]
+            .sort((a, b) => CORES_EM_ORDEM.indexOf(a.getCor()) - CORES_EM_ORDEM.indexOf(b.getCor()));
+        this.quantidade = jogadores.length;
+        document.querySelectorAll<HTMLInputElement>('input[name="quantidade"]').forEach((opcao) => {
+            opcao.checked = Number(opcao.value) === jogadores.length;
+        });
+        this.listarCamposDeNome();
+        const campos = document.querySelectorAll<HTMLInputElement>('#nomes-jogadores input');
+        const tipos = document.querySelectorAll<HTMLSelectElement>('#nomes-jogadores select');
+        jogadores.forEach((jogador, i) => {
+            campos[i].value = jogador.getNome();
+            tipos[i].value = !(jogador instanceof JogadorIA) ? 'humano'
+                : jogador.getEstrategia() instanceof IADificil ? 'dificil' : 'facil';
+        });
+    }
+
     private mostrar(idDaTela: string): void {
         document.querySelectorAll<HTMLElement>('.cartao-menu').forEach((tela) => {
             tela.hidden = tela.id !== idDaTela;
@@ -157,4 +217,10 @@ export class MenuInicial extends Phaser.Scene {
             });
         }
     }
+}
+
+function descreverData(partida: PartidaSalva): string {
+    const dia = partida.inicio.toLocaleDateString('pt-BR');
+    const hora = partida.inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${dia} às ${hora}`;
 }
