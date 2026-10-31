@@ -401,12 +401,12 @@ export class TelaPartida extends Phaser.Scene {
         this.temporizadorAviso = window.setTimeout(() => (aviso.hidden = true), DURACAO_AVISO);
     }
 
-    // Tecla D: ao passar o mouse sobre uma cartela, realça a região do segmento mais próximo.
+    // Alt + Shift + D: ao passar o mouse sobre uma cartela, realça a região do segmento mais próximo.
     private configurarDepuracao(): void {
         const indicador = document.getElementById('depuracao')!;
         indicador.hidden = true;
-        this.input.keyboard?.on('keydown-D', () => {
-            if (algumDialogoAberto()) return;
+        this.input.keyboard?.on('keydown-D', (evento: KeyboardEvent) => {
+            if (!evento.altKey || !evento.shiftKey || algumDialogoAberto()) return;
             this.depuracao = !this.depuracao;
             indicador.hidden = !this.depuracao;
             if (!this.depuracao) this.realceRegiao.clear();
@@ -426,11 +426,6 @@ export class TelaPartida extends Phaser.Scene {
 
         const segmento = segmentoMaisProximo(item.cartela, this.cameras.main.getWorldPoint(ponteiro.x, ponteiro.y), casa);
         const tipo = NOME_DO_TIPO[segmento.getTipo()];
-        if (segmento.getTipo() !== TipoTerreno.ESTRADA && segmento.getTipo() !== TipoTerreno.CIDADE) {
-            texto.textContent = `${tipo}: campos e mosteiros ainda não formam regiões.`;
-            return;
-        }
-
         const regiao = this.tabuleiro.regiaoDe(segmento);
         const cartelas = regiao.numCartelasDistintas();
         texto.textContent = `${tipo} · ${cartelas} ${cartelas === 1 ? 'cartela' : 'cartelas'} · `
