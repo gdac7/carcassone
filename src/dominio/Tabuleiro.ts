@@ -60,6 +60,23 @@ export class Tabuleiro {
         return this.regioes.filter((r) => r.estaOcupada());
     }
 
+    // Regiões em que o segmento `s` entraria se a cartela dele fosse colocada em `p`, na rotação atual.
+    // Serve para saber, antes de colocar, se a zona do seguidor já tem dono.
+    regioesQueSeLigam(s: Segmento, p: Posicao): Regiao[] {
+        const regioes: Regiao[] = [];
+        for (const ponto of s.pontosAtuais()) {
+            const vizinha = this.cartelasPorPosicao.get(p.vizinha(ponto.lado()).chave());
+            if (!vizinha) continue;
+            const regiao = this.regiaoDe(vizinha.cartela.segmentoNoPonto(ponto.oposta()));
+            if (!regioes.includes(regiao)) regioes.push(regiao);
+        }
+        return regioes;
+    }
+
+    getCartelasPorPosicao(): { posicao: Posicao; cartela: Cartela }[] {
+        return [...this.cartelasPorPosicao.values()];
+    }
+
     // Quantas das 8 casas ao redor de `c` (incluindo as diagonais) têm cartela.
     numVizinhasComDiagonais(c: Cartela): number {
         const item = [...this.cartelasPorPosicao.values()].find((i) => i.cartela === c);

@@ -138,6 +138,42 @@ describe('Tabuleiro.numVizinhasComDiagonais', () => {
   });
 });
 
+describe('Tabuleiro.regioesQueSeLigam', () => {
+  test('diz em que regiões o segmento entraria, antes de colocar a cartela', () => {
+    const t = comInicial();
+    const d = t.getCartelasPorPosicao()[0].cartela;
+    const estradaDeD = t.regiaoDe(d.segmentoNoPonto(PontoBorda.L));
+    const u = cartela('U', 1); // estrada deitada, ainda fora do tabuleiro
+    expect(t.regioesQueSeLigam(u.segmentoNoPonto(PontoBorda.O), new Posicao(1, 0))).toEqual([estradaDeD]);
+  });
+
+  test('segmento que não encosta em nada: nenhuma região', () => {
+    const t = comInicial();
+    const b = cartela('B');
+    const mosteiro = b.getSegmentos()[0];
+    expect(t.regioesQueSeLigam(mosteiro, new Posicao(0, 1))).toEqual([]);
+  });
+
+  test('permite saber se a zona já tem dono', () => {
+    const t = comInicial();
+    const d = t.getCartelasPorPosicao()[0].cartela;
+    t.regiaoDe(d.segmentoNoPonto(PontoBorda.L)).adicionarMeeple(new JogadorHumano('Ana', Cor.AZUL).retirarMeeple()!);
+    const u = cartela('U', 1);
+    expect(t.regioesQueSeLigam(u.segmentoNoPonto(PontoBorda.O), new Posicao(1, 0)).some((r) => r.estaOcupada())).toBe(true);
+  });
+});
+
+describe('Tabuleiro.getCartelasPorPosicao', () => {
+  test('lista as cartelas com as posições', () => {
+    const t = comInicial();
+    const b = cartela('B');
+    t.colocarCartela(b, new Posicao(0, 1));
+    const mesa = t.getCartelasPorPosicao();
+    expect(mesa.map((m) => m.posicao.chave()).sort()).toEqual(['0,0', '0,1']);
+    expect(mesa.find((m) => m.posicao.chave() === '0,1')!.cartela).toBe(b);
+  });
+});
+
 describe('Tabuleiro.vizinhas', () => {
   test('devolve as cartelas encostadas nos 4 lados', () => {
     const t = comInicial();
