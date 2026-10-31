@@ -679,7 +679,55 @@ kbd {
   list-style: none;
 }
 
+.linha-partida {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.linha-partida.confirmando {
+  min-height: 66px;
+  padding: 8px 10px 8px 14px;
+  background: rgba(227, 148, 134, 0.12);
+  border: 1px solid rgba(227, 148, 134, 0.45);
+  border-radius: 4px;
+}
+
+.linha-partida.confirmando p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.linha-partida.confirmando .botao {
+  padding: 6px 14px;
+  font-size: 0.95rem;
+}
+
+.botao-excluir {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+}
+
+.botao-excluir:hover svg {
+  fill: #e39486;
+}
+
+.botao-perigo {
+  color: var(--carvao);
+  background: #e39486;
+  border: 1px solid #e39486;
+}
+
+.botao-perigo:hover {
+  background: #eaa99d;
+}
+
 .partida-salva {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 2px 12px;

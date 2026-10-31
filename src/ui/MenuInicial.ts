@@ -14,6 +14,7 @@ import { COR_HEX, IMAGEM_POR_TIPO, MOVIMENTO_REDUZIDO, TAMANHO_CARTELA } from '.
 import { som } from './Som';
 
 const CORES_EM_ORDEM = [Cor.AZUL, Cor.VERMELHO, Cor.VERDE, Cor.AMARELO, Cor.PRETO];
+const ICONE_LIXEIRA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm4 2v8h2v-8h-2Zm4 0v8h2v-8h-2Z" /></svg>';
 
 export class MenuInicial extends Phaser.Scene {
     private repositorio: RepositorioPartida = new RepositorioLocal();
@@ -153,17 +154,61 @@ export class MenuInicial extends Phaser.Scene {
         document.getElementById('erro-carregar')!.hidden = true;
         document.getElementById('partidas-salvas')!.replaceChildren(...partidas.map((partida) => {
             const item = document.createElement('li');
-            const botao = document.createElement('button');
-            botao.type = 'button';
-            botao.className = 'partida-salva';
-            botao.innerHTML = '<span class="data"></span><span class="rodada"></span><span class="quem"></span>';
-            botao.querySelector('.data')!.textContent = descreverData(partida);
-            botao.querySelector('.rodada')!.textContent = `rodada ${partida.rodada}`;
-            botao.querySelector('.quem')!.textContent = partida.jogadores.join(', ');
-            botao.onclick = () => this.carregarJogo(partida.id);
-            item.append(botao);
+            item.className = 'linha-partida';
+            this.mostrarPartida(item, partida);
             return item;
         }));
+    }
+
+    private mostrarPartida(item: HTMLLIElement, partida: PartidaSalva): void {
+        const carregar = document.createElement('button');
+        carregar.type = 'button';
+        carregar.className = 'partida-salva';
+        carregar.innerHTML = '<span class="data"></span><span class="rodada"></span><span class="quem"></span>';
+        carregar.querySelector('.data')!.textContent = descreverData(partida);
+        carregar.querySelector('.rodada')!.textContent = `rodada ${partida.rodada}`;
+        carregar.querySelector('.quem')!.textContent = partida.jogadores.join(', ');
+        carregar.onclick = () => this.carregarJogo(partida.id);
+
+        const excluir = document.createElement('button');
+        excluir.type = 'button';
+        excluir.className = 'botao-icone botao-excluir';
+        excluir.title = 'Excluir partida';
+        excluir.setAttribute('aria-label', `Excluir a partida de ${descreverData(partida)}`);
+        excluir.innerHTML = ICONE_LIXEIRA;
+        excluir.onclick = () => this.confirmarExclusao(item, partida);
+
+        item.replaceChildren(carregar, excluir);
+        item.classList.remove('confirmando');
+    }
+
+    // A confirmação aparece no lugar da própria linha: excluir não tem volta.
+    private confirmarExclusao(item: HTMLLIElement, partida: PartidaSalva): void {
+        const pergunta = document.createElement('p');
+        pergunta.textContent = `Excluir a partida de ${descreverData(partida)}?`;
+
+        const cancelar = document.createElement('button');
+        cancelar.type = 'button';
+        cancelar.className = 'botao botao-secundario';
+        cancelar.textContent = 'Cancelar';
+        cancelar.onclick = () => {
+            this.mostrarPartida(item, partida);
+            item.querySelector<HTMLButtonElement>('.botao-excluir')!.focus();
+        };
+
+        const confirmar = document.createElement('button');
+        confirmar.type = 'button';
+        confirmar.className = 'botao botao-perigo';
+        confirmar.textContent = 'Excluir';
+        confirmar.onclick = () => {
+            this.repositorio.excluir(partida.id);
+            this.listarPartidasSalvas();
+            if (this.repositorio.listar().length === 0) this.mostrar('tela-inicio');
+        };
+
+        item.replaceChildren(pergunta, cancelar, confirmar);
+        item.classList.add('confirmando');
+        cancelar.focus();
     }
 
     // No formulário, a cor vem da linha; por isso os jogadores voltam na ordem das cores, e não na sorteada.
