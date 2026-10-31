@@ -10,6 +10,7 @@ import { Posicao } from '../dominio/Posicao';
 import type { Segmento } from '../dominio/Segmento';
 import { TipoTerreno } from '../dominio/TipoTerreno';
 import type { ObservadorJogo } from '../servicos/ObservadorJogo';
+import type { RepositorioPartida } from '../servicos/RepositorioPartida';
 import { COR_HEX, IMAGEM_POR_TIPO, MOVIMENTO_REDUZIDO, POSICAO_DO_PONTO, TAMANHO_CARTELA } from './aparencia';
 import { som } from './Som';
 
@@ -38,7 +39,9 @@ const NOME_DO_PAPEL: Record<TipoTerreno, string> = {
 // Observer: a tela observa o Jogo e se redesenha a cada aviso. As jogadas passam pelo Jogo (Facade).
 export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
     private jogo!: Jogo;
-    private jogadoresDoMenu: Jogador[] = [];
+    private repositorio!: RepositorioPartida;
+    // Null quando a partida foi carregada: o Jogo já vem em andamento.
+    private jogadoresDoMenu: Jogador[] | null = null;
     // O que já está desenhado; as regras vêm do Tabuleiro, pelo Jogo.
     private desenhadas = new Map<string, { posicao: Posicao; cartela: Cartela }>();
     private validas = new Set<string>();
@@ -65,15 +68,18 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
     private cartelasNoMonte = 0;
     private registros: { texto: string; cor: string | null }[] = [];
     private temporizadorAviso: number | undefined;
+    private avisouFalhaAoSalvar = false;
 
     constructor() {
         super('TelaPartida');
     }
 
     // As imagens já foram carregadas pelo MenuInicial, que também cria o Jogo.
-    init(dados: { jogo: Jogo; jogadores: Jogador[] }): void {
+    init(dados: { jogo: Jogo; jogadores?: Jogador[]; repositorio: RepositorioPartida }): void {
         this.jogo = dados.jogo;
-        this.jogadoresDoMenu = dados.jogadores;
+        this.jogadoresDoMenu = dados.jogadores ?? null;
+        this.repositorio = dados.repositorio;
+        this.avisouFalhaAoSalvar = false;
         this.desenhadas = new Map();
         this.validas = new Set();
         this.pontuacaoExibida = new Map();
@@ -110,11 +116,16 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
         this.exibirRegistros();
 
         this.jogo.adicionarObservador(this);
-        this.jogo.iniciarPartida(this.jogadoresDoMenu);
+        if (this.jogadoresDoMenu) {
+            this.jogo.iniciarPartida(this.jogadoresDoMenu);
+        } else {
+            this.retomar();
+        }
     }
 
     // Chamado pelo Jogo a cada mudança: depois de cada jogada, a cada novo turno e no fim da partida.
     aoAtualizar(jogo: Jogo): void {
+        this.salvarPartida();
         this.desenharCartelasNovas();
         this.mostrarJogadasNovas();
         this.retirarSeguidoresDevolvidos();
@@ -127,6 +138,28 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
             this.rodadaExibida = jogo.getRodadaAtual();
             this.comecarTurno();
         }
+    }
+
+    // Salvamento automático a cada aviso do Jogo. A partida terminada sai da lista: não há o que continuar.
+    salvarPartida(): void {
+        if (this.jogo.verificarFimDeJogo()) {
+            this.repositorio.excluir(this.jogo.getInicio().toISOString());
+        } else if (!this.repositorio.salvar(this.jogo) && !this.avisouFalhaAoSalvar) {
+            this.avisouFalhaAoSalvar = true;
+            this.avisar('Não foi possível salvar a partida. Ela continua, mas não poderá ser retomada.');
+        }
+    }
+
+    // Partida carregada: desenha o que já aconteceu, sem animar a mesa, e segue do turno salvo.
+    private retomar(): void {
+        this.desenharCartelasNovas();
+        this.mostrarJogadasNovas();
+        this.retirarSeguidoresDevolvidos(false);
+        this.exibirPlacar();
+        this.cartelasNoMonte = this.jogo.getQuantidadeNoMonte() + 1;
+        this.registrar('Partida retomada de onde parou.', null);
+        this.rodadaExibida = this.jogo.getRodadaAtual();
+        this.comecarTurno();
     }
 
     exibirTabuleiro(): void {
@@ -270,17 +303,18 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
     }
 
     // Cada jogada nova no histórico: desenha o seguidor, realça a cartela e escreve no registro.
+    // A vez passa em roda e só avança quando alguém joga, então a jogada i é do jogador i % n.
     private mostrarJogadasNovas(): void {
         const historico = this.jogo.getHistorico();
-        const autor = this.jogo.getJogadorDaVez();
-        for (const jogada of historico.slice(this.jogadasExibidas)) {
+        const jogadores = this.jogo.getJogadores();
+        for (let i = this.jogadasExibidas; i < historico.length; i++) {
+            const jogada = historico[i];
+            const autor = jogadores[i % jogadores.length];
             const segmento = jogada.getSegmentoDoMeeple();
-            if (segmento && autor) this.desenharSeguidor(segmento, jogada.getPosicao(), autor);
-            if (autor) {
-                this.realcarUltima(jogada.getPosicao(), autor);
-                const papel = segmento ? ` e ${NOME_DO_PAPEL[segmento.getTipo()]}` : '';
-                this.registrar(`${autor.getNome()} colocou uma cartela${papel}.`, COR_HEX[autor.getCor()]);
-            }
+            if (segmento) this.desenharSeguidor(segmento, jogada.getPosicao(), autor);
+            this.realcarUltima(jogada.getPosicao(), autor);
+            const papel = segmento ? ` e ${NOME_DO_PAPEL[segmento.getTipo()]}` : '';
+            this.registrar(`${autor.getNome()} colocou uma cartela${papel}.`, COR_HEX[autor.getCor()]);
         }
         this.jogadasExibidas = historico.length;
     }
@@ -541,16 +575,17 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
     }
 
     // Depois de pontuar, a região fica sem meeples: as figuras dela saem do tabuleiro.
-    private retirarSeguidoresDevolvidos(): void {
+    private retirarSeguidoresDevolvidos(animar = true): void {
         const tabuleiro = this.jogo.getTabuleiro();
         this.seguidores = this.seguidores.filter(({ segmento, imagem }) => {
             if (tabuleiro.regiaoDe(segmento).estaOcupada()) return true;
-            if (DURACAO > 0) {
+            if (animar && DURACAO > 0) {
                 this.tweens.add({
                     targets: imagem, y: imagem.y - 24, alpha: 0, duration: DURACAO * 3, ease: 'Quad.In',
                     onComplete: () => imagem.destroy(),
                 });
             } else {
+                this.tweens.killTweensOf(imagem);
                 imagem.destroy();
             }
             return false;
@@ -569,8 +604,11 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
             acao = aoConfirmar;
             confirmar.showModal();
         };
-        const reiniciar = () => this.scene.start('MenuInicial', { reiniciar: true });
-        const sair = () => this.scene.start('MenuInicial');
+        // Quem reinicia ou abandona desiste da partida: o save dela sai junto.
+        const descartarSave = () => this.repositorio.excluir(this.jogo.getInicio().toISOString());
+        const reiniciar = () => { descartarSave(); this.scene.start('MenuInicial', { reiniciar: true }); };
+        // `reiniciar: false` explícito: sem dados, o Phaser repetiria os do último start (e reiniciaria).
+        const sair = () => { descartarSave(); this.scene.start('MenuInicial', { reiniciar: false }); };
 
         const botoes: [string, () => void][] = [
             ['reiniciar', () => perguntar('Reiniciar a partida?', 'A partida atual será perdida e outra começa com os mesmos jogadores.', 'Reiniciar', reiniciar)],
