@@ -2,8 +2,10 @@ import type { Cartela } from './Cartela';
 import { Lado } from './Lado';
 import type { Posicao } from './Posicao';
 import type { Regiao } from './Regiao';
+import { RegiaoCampo } from './RegiaoCampo';
 import { RegiaoCidade } from './RegiaoCidade';
 import { RegiaoEstrada } from './RegiaoEstrada';
+import { RegiaoMosteiro } from './RegiaoMosteiro';
 import type { Segmento } from './Segmento';
 import { TipoTerreno } from './TipoTerreno';
 
@@ -58,6 +60,16 @@ export class Tabuleiro {
         return this.regioes.filter((r) => r.estaOcupada());
     }
 
+    // Quantas das 8 casas ao redor de `c` (incluindo as diagonais) têm cartela.
+    numVizinhasComDiagonais(c: Cartela): number {
+        const item = [...this.cartelasPorPosicao.values()].find((i) => i.cartela === c);
+        if (!item) {
+            throw new Error('A cartela não está no tabuleiro');
+        }
+        return item.posicao.vizinhasComDiagonais()
+            .filter((p) => this.cartelasPorPosicao.has(p.chave())).length;
+    }
+
     vizinhas(p: Posicao): Cartela[] {
         const vizinhas: Cartela[] = [];
         for (const lado of LADOS) {
@@ -82,13 +94,11 @@ export class Tabuleiro {
         return encostou;
     }
 
-    // Cada estrada e cidade da cartela nova entra na região que encosta nela, funde as regiões
-    // que ela liga ou, se não encosta em nenhuma, começa uma região nova.
+    // Cada segmento da cartela nova entra na região que encosta nele, funde as regiões
+    // que ele liga ou, se não encosta em nenhuma, começa uma região nova.
+    // O mosteiro não tem pontos de borda: sempre começa a própria região.
     private atualizarRegioes(c: Cartela, p: Posicao): void {
         for (const seg of c.getSegmentos()) {
-            // Campos e mosteiros ainda não formam regiões.
-            if (seg.getTipo() !== TipoTerreno.ESTRADA && seg.getTipo() !== TipoTerreno.CIDADE) continue;
-
             const regioesVizinhas: Regiao[] = [];
             let conexoes = 0;
             for (const ponto of seg.pontosAtuais()) {
@@ -111,7 +121,13 @@ export class Tabuleiro {
     }
 
     private criarRegiao(tipo: TipoTerreno): Regiao {
-        const regiao = tipo === TipoTerreno.CIDADE ? new RegiaoCidade() : new RegiaoEstrada();
+        let regiao: Regiao;
+        switch (tipo) {
+            case TipoTerreno.ESTRADA: regiao = new RegiaoEstrada(); break;
+            case TipoTerreno.CIDADE: regiao = new RegiaoCidade(); break;
+            case TipoTerreno.MOSTEIRO: regiao = new RegiaoMosteiro(this); break;
+            case TipoTerreno.CAMPO: regiao = new RegiaoCampo(this); break;
+        }
         this.regioes.push(regiao);
         return regiao;
     }
