@@ -2,6 +2,11 @@ import Phaser from 'phaser';
 import { Cor } from '../dominio/Cor';
 import type { Jogador } from '../dominio/Jogador';
 import { JogadorHumano } from '../dominio/JogadorHumano';
+import { JogadorIA } from '../dominio/JogadorIA';
+import { Jogo } from '../dominio/Jogo';
+import type { EstrategiaIA } from '../servicos/EstrategiaIA';
+import { IADificil } from '../servicos/IADificil';
+import { IAFacil } from '../servicos/IAFacil';
 import { COR_HEX, IMAGEM_POR_TIPO, MOVIMENTO_REDUZIDO, TAMANHO_CARTELA } from './aparencia';
 import { som } from './Som';
 
@@ -9,9 +14,15 @@ const CORES_EM_ORDEM = [Cor.AZUL, Cor.VERMELHO, Cor.VERDE, Cor.AMARELO, Cor.PRET
 
 export class MenuInicial extends Phaser.Scene {
     private quantidade = 2;
+    private reiniciar = false;
 
     constructor() {
         super('MenuInicial');
+    }
+
+    // `reiniciar`: a TelaPartida pediu outra partida com os mesmos jogadores (o formulário continua preenchido).
+    init(dados: { reiniciar?: boolean }): void {
+        this.reiniciar = dados.reiniciar ?? false;
     }
 
     // As imagens ficam disponíveis para todas as cenas, inclusive a TelaPartida.
@@ -36,37 +47,55 @@ export class MenuInicial extends Phaser.Scene {
         document.getElementById('menu')!.hidden = false;
         document.addEventListener('pointerdown', () => som.iniciarMusica(), { once: true });
         document.addEventListener('keydown', () => som.iniciarMusica(), { once: true });
+        if (this.reiniciar) this.iniciarJogo();
     }
 
     definirJogadores(): Jogador[] {
         const campos = document.querySelectorAll<HTMLInputElement>('#nomes-jogadores input');
-        return [...campos].map((campo, i) =>
-            new JogadorHumano(campo.value.trim() || `Jogador ${i + 1}`, CORES_EM_ORDEM[i]));
+        return [...campos].map((campo, i) => {
+            const estrategia = this.definirDificuldade(i);
+            const nome = campo.value.trim() || `${estrategia ? 'Computador' : 'Jogador'} ${i + 1}`;
+            return estrategia
+                ? new JogadorIA(nome, CORES_EM_ORDEM[i], estrategia)
+                : new JogadorHumano(nome, CORES_EM_ORDEM[i]);
+        });
     }
 
+    // null quando o jogador `indice` é humano.
+    definirDificuldade(indice: number): EstrategiaIA | null {
+        const tipo = document.querySelectorAll<HTMLSelectElement>('#nomes-jogadores select')[indice].value;
+        if (tipo === 'facil') return new IAFacil();
+        if (tipo === 'dificil') return new IADificil();
+        return null;
+    }
+
+    // MenuInicial cria o Jogo; a TelaPartida se registra como observadora e começa a partida.
     iniciarJogo(): void {
         document.getElementById('menu')!.hidden = true;
-        this.scene.start('TelaPartida', { jogadores: this.definirJogadores() });
+        this.scene.start('TelaPartida', { jogo: new Jogo(), jogadores: this.definirJogadores() });
     }
 
+    // onclick/onchange (e não addEventListener): a cena é recriada ao voltar da partida e não pode acumular cliques.
     private ligarMenu(): void {
-        document.getElementById('jogar')!.addEventListener('click', () => this.mostrar('tela-jogadores'));
-        document.getElementById('voltar')!.addEventListener('click', () => this.mostrar('tela-inicio'));
-        document.getElementById('comecar')!.addEventListener('click', () => this.iniciarJogo());
+        document.getElementById('jogar')!.onclick = () => this.mostrar('tela-jogadores');
+        document.getElementById('voltar')!.onclick = () => this.mostrar('tela-inicio');
+        document.getElementById('comecar')!.onclick = () => this.iniciarJogo();
 
         document.querySelectorAll<HTMLInputElement>('input[name="quantidade"]').forEach((opcao) => {
-            opcao.addEventListener('change', () => {
+            opcao.onchange = () => {
                 this.quantidade = Number(opcao.value);
                 this.listarCamposDeNome();
-            });
+            };
+            if (opcao.checked) this.quantidade = Number(opcao.value);
         });
         this.listarCamposDeNome();
     }
 
-    // Mantém os nomes já digitados ao mudar a quantidade.
+    // Mantém os nomes e os tipos já escolhidos ao mudar a quantidade.
     private listarCamposDeNome(): void {
         const lista = document.getElementById('nomes-jogadores')!;
         const digitados = [...lista.querySelectorAll('input')].map((campo) => campo.value);
+        const tipos = [...lista.querySelectorAll('select')].map((tipo) => tipo.value);
 
         lista.replaceChildren(...CORES_EM_ORDEM.slice(0, this.quantidade).map((cor, i) => {
             const item = document.createElement('li');
@@ -83,7 +112,14 @@ export class MenuInicial extends Phaser.Scene {
             campo.value = digitados[i] ?? '';
             campo.setAttribute('aria-label', `Nome do jogador ${i + 1}`);
 
-            item.append(meeple, campo);
+            const tipo = document.createElement('select');
+            tipo.setAttribute('aria-label', `Quem controla o jogador ${i + 1}`);
+            for (const [valor, rotulo] of [['humano', 'Humano'], ['facil', 'IA fácil'], ['dificil', 'IA difícil']]) {
+                tipo.add(new Option(rotulo, valor));
+            }
+            tipo.value = tipos[i] ?? 'humano';
+
+            item.append(meeple, campo, tipo);
             return item;
         }));
     }

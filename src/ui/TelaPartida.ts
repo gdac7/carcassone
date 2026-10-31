@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
-import { Cartela } from '../dominio/Cartela';
+import type { Cartela } from '../dominio/Cartela';
+import { Jogada } from '../dominio/Jogada';
+import type { Jogador } from '../dominio/Jogador';
+import { JogadorIA } from '../dominio/JogadorIA';
+import type { Jogo } from '../dominio/Jogo';
 import { Lado } from '../dominio/Lado';
 import { PontoBorda } from '../dominio/PontoBorda';
-import type { Segmento } from '../dominio/Segmento';
-import type { Jogador } from '../dominio/Jogador';
-import { MonteDeCartelas } from '../dominio/MonteDeCartelas';
 import { Posicao } from '../dominio/Posicao';
-import { Tabuleiro } from '../dominio/Tabuleiro';
+import type { Segmento } from '../dominio/Segmento';
 import { TipoTerreno } from '../dominio/TipoTerreno';
+import type { ObservadorJogo } from '../servicos/ObservadorJogo';
 import { COR_HEX, IMAGEM_POR_TIPO, MOVIMENTO_REDUZIDO, POSICAO_DO_PONTO, TAMANHO_CARTELA } from './aparencia';
 import { som } from './Som';
 
@@ -18,73 +20,83 @@ const DISTANCIA_PARA_ARRASTAR = 5;
 const VERDE_SUAVE = 0x8fd19e;
 const VERMELHO_SUAVE = 0xe39486;
 const DURACAO_AVISO = 3500;
+const PAUSA_DA_IA = 800;
+const MAXIMO_DE_REGISTROS = 8;
 const NOME_DO_TIPO: Record<TipoTerreno, string> = {
     [TipoTerreno.ESTRADA]: 'Estrada',
     [TipoTerreno.CIDADE]: 'Cidade',
     [TipoTerreno.CAMPO]: 'Campo',
     [TipoTerreno.MOSTEIRO]: 'Mosteiro',
 };
+const NOME_DO_PAPEL: Record<TipoTerreno, string> = {
+    [TipoTerreno.ESTRADA]: 'um ladrão',
+    [TipoTerreno.CIDADE]: 'um cavaleiro',
+    [TipoTerreno.CAMPO]: 'um fazendeiro',
+    [TipoTerreno.MOSTEIRO]: 'um monge',
+};
 
-// Provisório até a etapa 9: a cena usa o domínio diretamente; depois passará a observar o Jogo.
-export class TelaPartida extends Phaser.Scene {
-    private monte = new MonteDeCartelas();
-    private tabuleiro = new Tabuleiro();
-    // Só para desenhar: quem decide onde uma cartela cabe é o Tabuleiro.
+// Observer: a tela observa o Jogo e se redesenha a cada aviso. As jogadas passam pelo Jogo (Facade).
+export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
+    private jogo!: Jogo;
+    private jogadoresDoMenu: Jogador[] = [];
+    // O que já está desenhado; as regras vêm do Tabuleiro, pelo Jogo.
     private desenhadas = new Map<string, { posicao: Posicao; cartela: Cartela }>();
     private validas = new Set<string>();
-    private jogadores: Jogador[] = [];
     private pontuacaoExibida = new Map<Jogador, number>();
-    private cartelaAtual: Cartela | null = null;
     // Prévia da cartela da vez sob o mouse: imagem e brasão giram juntos dentro do container.
     private fantasma!: Phaser.GameObjects.Container;
     private fantasmaImagem!: Phaser.GameObjects.Image;
     private fantasmaBrasao!: Phaser.GameObjects.Image;
     private destaques: Phaser.GameObjects.Image[] = [];
     private realceRegiao!: Phaser.GameObjects.Graphics;
+    private realceUltima!: Phaser.GameObjects.Graphics;
     private depuracao = false;
     private arrastando = false;
     private casaSobMouse: Posicao | null = null;
-    // Cada turno tem duas fases: colocar a cartela e, depois, o seguidor (opcional).
-    private fase: 'cartela' | 'seguidor' = 'cartela';
-    private daVez = 0;
+    // O turno do humano tem duas fases: colocar a cartela e, depois, o seguidor (opcional).
+    // Na vez da IA, e entre um aviso e outro do Jogo, a tela fica esperando.
+    private fase: 'cartela' | 'seguidor' | 'espera' = 'espera';
+    // Cartela que o humano já pôs na mesa, mas que só vai para o Jogo junto com a escolha do seguidor.
+    private pendente: { cartela: Cartela; posicao: Posicao } | null = null;
     private opcoesSeguidor: Phaser.GameObjects.GameObject[] = [];
     private seguidores: { segmento: Segmento; imagem: Phaser.GameObjects.Container }[] = [];
+    private jogadasExibidas = 0;
+    private rodadaExibida = 0;
+    private cartelasNoMonte = 0;
+    private registros: { texto: string; cor: string | null }[] = [];
     private temporizadorAviso: number | undefined;
 
     constructor() {
         super('TelaPartida');
     }
 
-    // As imagens já foram carregadas pelo MenuInicial.
-    init(dados: { jogadores: Jogador[] }): void {
-        this.jogadores = dados.jogadores;
-        this.pontuacaoExibida = new Map();
-        this.monte = new MonteDeCartelas();
-        this.tabuleiro = new Tabuleiro();
+    // As imagens já foram carregadas pelo MenuInicial, que também cria o Jogo.
+    init(dados: { jogo: Jogo; jogadores: Jogador[] }): void {
+        this.jogo = dados.jogo;
+        this.jogadoresDoMenu = dados.jogadores;
         this.desenhadas = new Map();
         this.validas = new Set();
+        this.pontuacaoExibida = new Map();
         this.destaques = [];
         this.depuracao = false;
-        this.fase = 'cartela';
-        this.daVez = 0;
+        this.fase = 'espera';
+        this.pendente = null;
         this.opcoesSeguidor = [];
         this.seguidores = [];
-        this.cartelaAtual = null;
+        this.jogadasExibidas = 0;
+        this.rodadaExibida = 0;
+        this.cartelasNoMonte = 71;
+        this.registros = [];
     }
 
     create(): void {
         document.getElementById('painel')!.hidden = false;
+        this.realceUltima = this.add.graphics().setDepth(4);
         this.realceRegiao = this.add.graphics().setDepth(5);
         this.fantasmaImagem = this.add.image(0, 0, '__DEFAULT');
         this.fantasmaBrasao = this.add.image(0, 0, 'brasao').setScale(0.6).setVisible(false);
         this.fantasma = this.add.container(0, 0, [this.fantasmaImagem, this.fantasmaBrasao])
             .setAlpha(0.6).setVisible(false).setDepth(10);
-
-        this.monte.criarCartelasPadrao();
-        this.monte.embaralhar();
-        const inicial = this.monte.retirarCartelaInicial();
-        this.tabuleiro.colocarCartela(inicial, new Posicao(0, 0));
-        this.desenharCartela(inicial, new Posicao(0, 0), false);
 
         this.centralizarNaAreaVisivel();
         this.manterCentroAoRedimensionar();
@@ -94,25 +106,48 @@ export class TelaPartida extends Phaser.Scene {
         this.configurarAjuda();
         this.configurarDepuracao();
         this.configurarSeguidor();
+        this.configurarSaida();
+        this.exibirRegistros();
 
-        this.puxarCartela();
+        this.jogo.adicionarObservador(this);
+        this.jogo.iniciarPartida(this.jogadoresDoMenu);
+    }
+
+    // Chamado pelo Jogo a cada mudança: depois de cada jogada, a cada novo turno e no fim da partida.
+    aoAtualizar(jogo: Jogo): void {
+        this.desenharCartelasNovas();
+        this.mostrarJogadasNovas();
+        this.retirarSeguidoresDevolvidos();
+        this.registrarPontos(jogo.verificarFimDeJogo());
         this.exibirPlacar();
+
+        if (jogo.verificarFimDeJogo()) {
+            this.exibirResultadoFinal();
+        } else if (jogo.getRodadaAtual() !== this.rodadaExibida) {
+            this.rodadaExibida = jogo.getRodadaAtual();
+            this.comecarTurno();
+        }
+    }
+
+    exibirTabuleiro(): void {
+        this.desenharCartelasNovas();
     }
 
     exibirPlacar(): void {
         const lista = document.getElementById('lista-jogadores')!;
-        lista.replaceChildren(...this.jogadores.map((jogador, i) => {
+        const daVez = this.jogo.getJogadorDaVez();
+        lista.replaceChildren(...this.jogo.getJogadores().map((jogador) => {
             const pontos = jogador.getPontuacao();
             const reserva = jogador.getQuantidadeNaReserva();
             const item = document.createElement('li');
-            item.className = i === this.daVez ? 'jogador da-vez' : 'jogador';
+            item.className = jogador === daVez ? 'jogador da-vez' : 'jogador';
             item.style.setProperty('--cor-jogador', COR_HEX[jogador.getCor()]);
             item.innerHTML = `
                 <span class="meeple" aria-hidden="true"></span>
                 <span class="nome"></span>
                 <span class="pontos"><span class="valor"></span><small>${pontos === 1 ? 'ponto' : 'pontos'}</small></span>
                 <span class="reserva"></span>`;
-            item.querySelector('.nome')!.textContent = jogador.getNome();
+            item.querySelector('.nome')!.textContent = jogador.getNome() + (jogador instanceof JogadorIA ? ' (IA)' : '');
             item.querySelector('.valor')!.textContent = String(pontos);
             item.querySelector('.reserva')!.textContent = reserva === 1 ? '1 seguidor' : `${reserva} seguidores`;
 
@@ -132,6 +167,33 @@ export class TelaPartida extends Phaser.Scene {
         dialogo.scrollTop = 0; // o foco vai para o botão do fim e rolaria o texto até lá
     }
 
+    // Placar final, do maior para o menor; empate no topo é vitória compartilhada.
+    exibirResultadoFinal(): void {
+        this.fase = 'espera';
+        this.limparDestaques();
+        this.fantasma.setVisible(false);
+        this.atualizarCartelaDaVez(0);
+        document.getElementById('vez')!.textContent = 'Fim da partida';
+
+        const jogadores = [...this.jogo.getJogadores()].sort((a, b) => b.getPontuacao() - a.getPontuacao());
+        const maior = jogadores[0].getPontuacao();
+        const vencedores = jogadores.filter((j) => j.getPontuacao() === maior);
+        document.getElementById('resultado-titulo')!.textContent = vencedores.length > 1
+            ? `Vitória compartilhada: ${vencedores.map((v) => v.getNome()).join(' e ')}`
+            : `${vencedores[0].getNome()} venceu!`;
+        document.getElementById('resultado-lista')!.replaceChildren(...jogadores.map((jogador) => {
+            const item = document.createElement('li');
+            item.style.setProperty('--cor-jogador', COR_HEX[jogador.getCor()]);
+            if (vencedores.includes(jogador)) item.classList.add('vencedor');
+            item.innerHTML = '<span class="meeple" aria-hidden="true"></span><span class="nome"></span><span class="pontos"></span>';
+            item.querySelector('.nome')!.textContent = jogador.getNome();
+            item.querySelector('.pontos')!.textContent = `${jogador.getPontuacao()} pontos`;
+            return item;
+        }));
+        this.registrar('Fim da partida.', null);
+        this.time.delayedCall(DURACAO * 4, () => (document.getElementById('resultado') as HTMLDialogElement).showModal());
+    }
+
     destacarPosicoesValidas(posicoes: Posicao[]): void {
         this.validas = new Set(posicoes.map((p) => p.chave()));
         this.destaques.forEach((d) => d.destroy());
@@ -144,7 +206,8 @@ export class TelaPartida extends Phaser.Scene {
     private pintarDestaques(): void {
         for (const destaque of this.destaques) {
             const casa = new Posicao(destaque.x / TAMANHO_CARTELA, destaque.y / TAMANHO_CARTELA);
-            if (this.cartelaAtual && this.tabuleiro.podeColocar(this.cartelaAtual, casa)) {
+            const cartela = this.jogo.getCartelaAtual();
+            if (cartela && this.jogo.getTabuleiro().podeColocar(cartela, casa)) {
                 destaque.setTint(VERDE_SUAVE).setAlpha(0.85);
             } else if (this.validas.has(casa.chave())) {
                 destaque.setTint(VERDE_SUAVE).setAlpha(0.3);
@@ -154,29 +217,116 @@ export class TelaPartida extends Phaser.Scene {
         }
     }
 
-    // Puxa até sair uma cartela que caiba em algum lugar; as outras são descartadas.
-    private puxarCartela(): void {
-        this.cartelaAtual = null;
-        const descartadas: string[] = [];
-        while (!this.monte.estaVazio()) {
-            const cartela = this.monte.puxarCartela();
-            const posicoes = this.tabuleiro.posicoesValidas(cartela);
-            if (posicoes.length > 0) {
-                this.cartelaAtual = cartela;
-                this.destacarPosicoesValidas(posicoes);
-                break;
-            }
-            descartadas.push(cartela.getId());
-        }
-        if (!this.cartelaAtual) this.destacarPosicoesValidas([]);
-        if (descartadas.length > 0) {
-            const nomes = descartadas.join(', ');
-            this.avisar(descartadas.length === 1
-                ? `A cartela ${nomes} não cabia em lugar nenhum e foi descartada.`
-                : `As cartelas ${nomes} não cabiam em lugar nenhum e foram descartadas.`);
-        }
+    private limparDestaques(): void {
+        this.destaques.forEach((d) => d.destroy());
+        this.destaques = [];
+        this.validas = new Set();
+    }
+
+    // Humano: libera a mesa e espera o clique. IA: pausa para o jogador acompanhar e pede o turno ao Jogo.
+    private comecarTurno(): void {
+        const jogador = this.jogo.getJogadorDaVez()!;
+        const cartela = this.jogo.getCartelaAtual()!;
+        this.registrarDescartes();
         this.atualizarCartelaDaVez(0);
-        this.fantasma.setVisible(false);
+        document.getElementById('vez')!.textContent = `Vez de ${jogador.getNome()}`;
+
+        if (jogador instanceof JogadorIA) {
+            this.fase = 'espera';
+            this.limparDestaques();
+            this.fantasma.setVisible(false);
+            this.habilitarGiros(false);
+            this.time.delayedCall(PAUSA_DA_IA, () => this.jogo.iniciarTurnoDaVez());
+            return;
+        }
+        this.fase = 'cartela';
+        this.habilitarGiros(true);
+        this.destacarPosicoesValidas(this.jogo.getTabuleiro().posicoesValidas(cartela));
+        this.jogo.iniciarTurnoDaVez(); // para o humano não faz nada: o turno segue com os cliques
+    }
+
+    // O Jogo descarta sozinho as cartelas sem lugar; a tela percebe pelo tamanho do monte.
+    private registrarDescartes(): void {
+        const restantes = this.jogo.getQuantidadeNoMonte();
+        const descartadas = this.cartelasNoMonte - 1 - restantes;
+        this.cartelasNoMonte = restantes;
+        if (descartadas <= 0) return;
+        const texto = descartadas === 1
+            ? 'Uma cartela não cabia em lugar nenhum e foi descartada.'
+            : `${descartadas} cartelas não cabiam em lugar nenhum e foram descartadas.`;
+        this.avisar(texto);
+        this.registrar(texto, null);
+    }
+
+    // Desenha as cartelas que estão no tabuleiro e ainda não estão na tela (a inicial e as jogadas da IA).
+    private desenharCartelasNovas(): void {
+        for (const { posicao, cartela } of this.jogo.getTabuleiro().getCartelasPorPosicao()) {
+            if (!this.desenhadas.has(posicao.chave())) {
+                this.desenharCartela(cartela, posicao, this.jogadasExibidas > 0);
+                if (this.jogadasExibidas > 0) som.tocarColocar();
+            }
+        }
+        this.pendente = null;
+    }
+
+    // Cada jogada nova no histórico: desenha o seguidor, realça a cartela e escreve no registro.
+    private mostrarJogadasNovas(): void {
+        const historico = this.jogo.getHistorico();
+        const autor = this.jogo.getJogadorDaVez();
+        for (const jogada of historico.slice(this.jogadasExibidas)) {
+            const segmento = jogada.getSegmentoDoMeeple();
+            if (segmento && autor) this.desenharSeguidor(segmento, jogada.getPosicao(), autor);
+            if (autor) {
+                this.realcarUltima(jogada.getPosicao(), autor);
+                const papel = segmento ? ` e ${NOME_DO_PAPEL[segmento.getTipo()]}` : '';
+                this.registrar(`${autor.getNome()} colocou uma cartela${papel}.`, COR_HEX[autor.getCor()]);
+            }
+        }
+        this.jogadasExibidas = historico.length;
+    }
+
+    // A última cartela jogada ganha uma moldura na cor de quem a colocou.
+    private realcarUltima(posicao: Posicao, jogador: Jogador): void {
+        const cor = Number.parseInt(COR_HEX[jogador.getCor()].slice(1), 16);
+        const x = posicao.getX() * TAMANHO_CARTELA - TAMANHO_CARTELA / 2;
+        const y = posicao.getY() * TAMANHO_CARTELA - TAMANHO_CARTELA / 2;
+        this.realceUltima.clear().lineStyle(3, cor, 0.6).strokeRect(x - 2, y - 2, TAMANHO_CARTELA + 4, TAMANHO_CARTELA + 4);
+    }
+
+    // Quem ganhou pontos desde o último aviso.
+    private registrarPontos(fimDeJogo: boolean): void {
+        const ganhos: string[] = [];
+        for (const jogador of this.jogo.getJogadores()) {
+            const ganho = jogador.getPontuacao() - (this.pontuacaoExibida.get(jogador) ?? 0);
+            if (ganho <= 0) continue;
+            const texto = `${jogador.getNome()} ganhou ${ganho} ${ganho === 1 ? 'ponto' : 'pontos'}${fimDeJogo ? ' na contagem final' : ''}.`;
+            ganhos.push(texto);
+            this.registrar(texto, COR_HEX[jogador.getCor()]);
+        }
+        if (ganhos.length > 0) this.avisar(ganhos.join(' '), true);
+    }
+
+    private registrar(texto: string, cor: string | null): void {
+        this.registros.unshift({ texto, cor });
+        this.registros = this.registros.slice(0, MAXIMO_DE_REGISTROS);
+        this.exibirRegistros();
+    }
+
+    private exibirRegistros(): void {
+        const lista = document.getElementById('registro')!;
+        if (this.registros.length === 0) {
+            const vazio = document.createElement('li');
+            vazio.className = 'registro-vazio';
+            vazio.textContent = 'As jogadas aparecem aqui.';
+            lista.replaceChildren(vazio);
+            return;
+        }
+        lista.replaceChildren(...this.registros.map(({ texto, cor }) => {
+            const item = document.createElement('li');
+            if (cor) item.style.setProperty('--cor-jogador', cor);
+            item.textContent = texto;
+            return item;
+        }));
     }
 
     private desenharCartela(cartela: Cartela, posicao: Posicao, animar: boolean): void {
@@ -273,7 +423,8 @@ export class TelaPartida extends Phaser.Scene {
 
     private configurarColocacao(): void {
         this.input.on('pointerup', (ponteiro: Phaser.Input.Pointer) => {
-            if (this.arrastando || !this.cartelaAtual || this.fase !== 'cartela') return;
+            const cartela = this.jogo.getCartelaAtual();
+            if (this.arrastando || !cartela || this.fase !== 'cartela') return;
             const casa = this.casaSob(ponteiro);
             if (this.desenhadas.has(casa.chave())) return;
 
@@ -285,22 +436,22 @@ export class TelaPartida extends Phaser.Scene {
                 this.recusar('A cartela não encaixa nesta casa em nenhuma rotação.');
                 return;
             }
-            if (!this.tabuleiro.podeColocar(this.cartelaAtual, casa)) {
+            if (!this.jogo.getTabuleiro().podeColocar(cartela, casa)) {
                 this.recusar('Nesta casa ela só encaixa girada. Use Q ou E.');
                 return;
             }
-            this.tabuleiro.colocarCartela(this.cartelaAtual, casa);
 
-            this.desenharCartela(this.cartelaAtual, casa, true);
+            this.pendente = { cartela, posicao: casa };
+            this.desenharCartela(cartela, casa, true);
             som.tocarColocar();
-            this.iniciarFaseSeguidor(this.cartelaAtual, casa);
+            this.iniciarFaseSeguidor(cartela, casa);
         });
     }
 
     private configurarSeguidor(): void {
         const pular = document.getElementById('pular')!;
         const aoPular = () => {
-            if (this.fase === 'seguidor') this.encerrarTurno();
+            if (this.fase === 'seguidor') this.confirmarJogada(null);
         };
         pular.addEventListener('click', aoPular);
         this.input.keyboard?.on('keydown-SPACE', () => {
@@ -312,30 +463,27 @@ export class TelaPartida extends Phaser.Scene {
         });
     }
 
-    // Um círculo em cada segmento da cartela recém-colocada; os de zona já ocupada ficam apagados.
+    // Um círculo em cada segmento da cartela colocada; os de zona já ocupada ficam apagados.
+    // A cartela ainda não está no Tabuleiro: regioesQueSeLigam diz em que zonas cada segmento vai entrar.
     private iniciarFaseSeguidor(cartela: Cartela, casa: Posicao): void {
-        const jogador = this.jogadores[this.daVez];
+        const jogador = this.jogo.getJogadorDaVez()!;
         if (jogador.getQuantidadeNaReserva() === 0) {
             this.avisar(`${jogador.getNome()} não tem seguidores na reserva.`);
-            this.encerrarTurno();
+            this.confirmarJogada(null);
             return;
         }
 
         this.fase = 'seguidor';
         this.fantasma.setVisible(false);
-        this.destaques.forEach((d) => d.destroy());
-        this.destaques = [];
-        document.querySelectorAll<HTMLButtonElement>('.botao-giro').forEach((b) => (b.disabled = true));
+        this.limparDestaques();
+        this.habilitarGiros(false);
         document.getElementById('fase-seguidor-texto')!.textContent =
             `${jogador.getNome()}, coloque um seguidor na cartela ou pule.`;
         document.getElementById('fase-seguidor')!.hidden = false;
 
-        const cx = casa.getX() * TAMANHO_CARTELA;
-        const cy = casa.getY() * TAMANHO_CARTELA;
-        for (const [segmento, [px, py]] of posicoesDosSeguidores(cartela)) {
-            const x = cx + px * TAMANHO_CARTELA;
-            const y = cy + py * TAMANHO_CARTELA;
-            const livre = !this.tabuleiro.regiaoDe(segmento).estaOcupada();
+        const tabuleiro = this.jogo.getTabuleiro();
+        for (const [segmento, [x, y]] of this.posicoesNaMesa(cartela, casa)) {
+            const livre = tabuleiro.regioesQueSeLigam(segmento, casa).every((r) => !r.estaOcupada());
             const circulo = this.add.circle(0, 0, 13, livre ? 0xc8a66a : 0x2b2f33, livre ? 0.95 : 0.6)
                 .setStrokeStyle(2, livre ? 0x2b2f33 : 0xe39486, 1);
             const icone = this.add.image(0, 0, `seguidor-${segmento.getTipo()}`).setScale(0.7)
@@ -345,19 +493,31 @@ export class TelaPartida extends Phaser.Scene {
                 opcao.setInteractive({ useHandCursor: true })
                     .on('pointerover', () => opcao.setScale(1.15))
                     .on('pointerout', () => opcao.setScale(1))
-                    .on('pointerup', () => this.colocarSeguidor(segmento, x, y));
+                    .on('pointerup', () => {
+                        if (!this.arrastando && this.fase === 'seguidor') this.confirmarJogada(segmento);
+                    });
             }
             this.opcoesSeguidor.push(opcao);
         }
     }
 
-    private colocarSeguidor(segmento: Segmento, x: number, y: number): void {
-        if (this.arrastando || this.fase !== 'seguidor') return;
-        const jogador = this.jogadores[this.daVez];
-        const meeple = jogador.retirarMeeple();
-        if (!meeple) return;
-        this.tabuleiro.regiaoDe(segmento).adicionarMeeple(meeple);
+    // A jogada do humano vai inteira para o Jogo, que valida, coloca, pontua e avisa a tela.
+    private confirmarJogada(segmento: Segmento | null): void {
+        const pendente = this.pendente;
+        if (!pendente) return;
+        this.fase = 'espera';
+        this.opcoesSeguidor.forEach((o) => o.destroy());
+        this.opcoesSeguidor = [];
+        document.getElementById('fase-seguidor')!.hidden = true;
 
+        const jogada = new Jogada(pendente.posicao, pendente.cartela.getRotacao(), segmento);
+        if (!this.jogo.executarJogada(jogada)) {
+            this.avisar('O jogo recusou a jogada.');
+        }
+    }
+
+    private desenharSeguidor(segmento: Segmento, posicao: Posicao, jogador: Jogador): void {
+        const [x, y] = this.posicoesNaMesa(segmento.getCartela(), posicao).get(segmento)!;
         const textura = `seguidor-${segmento.getTipo()}`;
         const sombra = this.add.image(1.5, 2, textura).setTintFill(0x000000).setAlpha(0.5);
         const figura = this.add.image(0, 0, textura).setTintFill(Number.parseInt(COR_HEX[jogador.getCor()].slice(1), 16));
@@ -367,38 +527,24 @@ export class TelaPartida extends Phaser.Scene {
             this.tweens.add({ targets: imagem, scale: 1.1, alpha: 1, duration: DURACAO, ease: 'Back.Out' });
         }
         this.seguidores.push({ segmento, imagem });
-        som.tocarColocar();
-        this.encerrarTurno();
     }
 
-    // Provisório até o Jogo: a tela pontua as regiões concluídas e passa a vez.
-    private encerrarTurno(): void {
-        this.fase = 'cartela';
-        this.opcoesSeguidor.forEach((o) => o.destroy());
-        this.opcoesSeguidor = [];
-        document.getElementById('fase-seguidor')!.hidden = true;
-        document.querySelectorAll<HTMLButtonElement>('.botao-giro').forEach((b) => (b.disabled = false));
-
-        const pontuacoes: string[] = [];
-        for (const regiao of this.tabuleiro.regioesConcluidas()) {
-            if (!regiao.estaOcupada()) continue;
-            const nomes = regiao.jogadoresComMaioria().map((j) => j.getNome()).join(' e ');
-            const tipo = NOME_DO_TIPO[regiao.getSegmentos()[0].getTipo()];
-            pontuacoes.push(`${tipo} concluída: ${nomes} +${regiao.calcularPontos(false)}`);
-            regiao.pontuar(false);
+    // Onde fica, em pixels, o seguidor de cada segmento da cartela posta em `casa`.
+    private posicoesNaMesa(cartela: Cartela, casa: Posicao): Map<Segmento, [number, number]> {
+        const cx = casa.getX() * TAMANHO_CARTELA;
+        const cy = casa.getY() * TAMANHO_CARTELA;
+        const posicoes = new Map<Segmento, [number, number]>();
+        for (const [segmento, [px, py]] of posicoesDosSeguidores(cartela)) {
+            posicoes.set(segmento, [cx + px * TAMANHO_CARTELA, cy + py * TAMANHO_CARTELA]);
         }
-        this.retirarSeguidoresDevolvidos();
-        if (pontuacoes.length > 0) this.avisar(pontuacoes.join('. ') + '.', true);
-
-        this.daVez = (this.daVez + 1) % this.jogadores.length;
-        this.exibirPlacar();
-        this.puxarCartela();
+        return posicoes;
     }
 
     // Depois de pontuar, a região fica sem meeples: as figuras dela saem do tabuleiro.
     private retirarSeguidoresDevolvidos(): void {
+        const tabuleiro = this.jogo.getTabuleiro();
         this.seguidores = this.seguidores.filter(({ segmento, imagem }) => {
-            if (this.tabuleiro.regiaoDe(segmento).estaOcupada()) return true;
+            if (tabuleiro.regiaoDe(segmento).estaOcupada()) return true;
             if (DURACAO > 0) {
                 this.tweens.add({
                     targets: imagem, y: imagem.y - 24, alpha: 0, duration: DURACAO * 3, ease: 'Quad.In',
@@ -408,6 +554,39 @@ export class TelaPartida extends Phaser.Scene {
                 imagem.destroy();
             }
             return false;
+        });
+    }
+
+    // Reiniciar e abandonar voltam ao MenuInicial, que é quem cria o Jogo.
+    private configurarSaida(): void {
+        const confirmar = document.getElementById('confirmar') as HTMLDialogElement;
+        const resultado = document.getElementById('resultado') as HTMLDialogElement;
+        let acao: () => void = () => {};
+        const perguntar = (titulo: string, texto: string, rotulo: string, aoConfirmar: () => void) => {
+            document.getElementById('confirmar-titulo')!.textContent = titulo;
+            document.getElementById('confirmar-texto')!.textContent = texto;
+            document.getElementById('confirmar-sim')!.textContent = rotulo;
+            acao = aoConfirmar;
+            confirmar.showModal();
+        };
+        const reiniciar = () => this.scene.start('MenuInicial', { reiniciar: true });
+        const sair = () => this.scene.start('MenuInicial');
+
+        const botoes: [string, () => void][] = [
+            ['reiniciar', () => perguntar('Reiniciar a partida?', 'A partida atual será perdida e outra começa com os mesmos jogadores.', 'Reiniciar', reiniciar)],
+            ['abandonar', () => perguntar('Abandonar a partida?', 'A partida atual será perdida e você volta ao menu.', 'Abandonar', sair)],
+            ['confirmar-sim', () => { confirmar.close(); acao(); }],
+            ['confirmar-nao', () => confirmar.close()],
+            ['resultado-de-novo', () => { resultado.close(); reiniciar(); }],
+            ['resultado-menu', () => { resultado.close(); sair(); }],
+        ];
+        for (const [id, aoClicar] of botoes) document.getElementById(id)!.onclick = aoClicar;
+
+        this.events.once('shutdown', () => {
+            document.getElementById('painel')!.hidden = true;
+            document.getElementById('aviso')!.hidden = true;
+            if (confirmar.open) confirmar.close();
+            if (resultado.open) resultado.close();
         });
     }
 
@@ -433,8 +612,9 @@ export class TelaPartida extends Phaser.Scene {
 
     private configurarGiros(): void {
         const girar = (vezes: number) => {
-            if (!this.cartelaAtual || this.fase !== 'cartela' || algumDialogoAberto()) return;
-            for (let i = 0; i < vezes; i++) this.cartelaAtual.girar();
+            const cartela = this.jogo.getCartelaAtual();
+            if (!cartela || this.fase !== 'cartela' || algumDialogoAberto()) return;
+            for (let i = 0; i < vezes; i++) cartela.girar();
             som.tocarGirar();
             this.atualizarCartelaDaVez(vezes === 1 ? -90 : 90);
             this.pintarDestaques();
@@ -447,6 +627,10 @@ export class TelaPartida extends Phaser.Scene {
         this.input.keyboard?.on('keydown-Q', () => girar(3));
     }
 
+    private habilitarGiros(habilitar: boolean): void {
+        document.querySelectorAll<HTMLButtonElement>('.botao-giro').forEach((b) => (b.disabled = !habilitar));
+    }
+
     // `anguloDeSaida` é de onde a imagem parte na animação: a nova rotação já está aplicada.
     private atualizarCartelaDaVez(anguloDeSaida: number): void {
         const imagem = document.getElementById('cartela-atual') as HTMLImageElement;
@@ -454,7 +638,8 @@ export class TelaPartida extends Phaser.Scene {
         const texto = document.getElementById('monte')!;
         const botoes = document.querySelectorAll<HTMLButtonElement>('.botao-giro');
 
-        if (!this.cartelaAtual) {
+        const cartela = this.jogo.getCartelaAtual();
+        if (!cartela) {
             imagem.hidden = true;
             brasao.hidden = true;
             texto.textContent = 'O monte acabou.';
@@ -463,10 +648,10 @@ export class TelaPartida extends Phaser.Scene {
         }
 
         imagem.hidden = false;
-        imagem.src = `tiles/${chaveDaImagem(this.cartelaAtual)}.png`;
-        imagem.alt = `Cartela do tipo ${this.cartelaAtual.getId()}`;
-        const restantes = this.monte.getQuantidade();
-        const posicaoBrasao = posicaoDoBrasao(this.cartelaAtual);
+        imagem.src = `tiles/${chaveDaImagem(cartela)}.png`;
+        imagem.alt = `Cartela do tipo ${cartela.getId()}`;
+        const restantes = this.jogo.getQuantidadeNoMonte();
+        const posicaoBrasao = posicaoDoBrasao(cartela);
         brasao.hidden = posicaoBrasao === null;
         if (posicaoBrasao) {
             brasao.style.left = `${50 + posicaoBrasao[0] * 86}%`;
@@ -474,7 +659,7 @@ export class TelaPartida extends Phaser.Scene {
         }
         texto.textContent = restantes === 1 ? '1 cartela no monte' : `${restantes} cartelas no monte`;
 
-        this.fantasmaImagem.setTexture(chaveDaImagem(this.cartelaAtual));
+        this.fantasmaImagem.setTexture(chaveDaImagem(cartela));
         this.fantasmaBrasao.setVisible(posicaoBrasao !== null);
         if (posicaoBrasao) {
             this.fantasmaBrasao.setPosition(posicaoBrasao[0] * TAMANHO_CARTELA, posicaoBrasao[1] * TAMANHO_CARTELA);
@@ -493,7 +678,7 @@ export class TelaPartida extends Phaser.Scene {
     private mostrarFantasma(ponteiro: Phaser.Input.Pointer): void {
         const casa = this.casaSob(ponteiro);
         this.casaSobMouse = casa;
-        const livre = this.cartelaAtual !== null && this.fase === 'cartela' && !this.desenhadas.has(casa.chave());
+        const livre = this.jogo.getCartelaAtual() !== null && this.fase === 'cartela' && !this.desenhadas.has(casa.chave());
         this.fantasma
             .setVisible(livre)
             .setPosition(casa.getX() * TAMANHO_CARTELA, casa.getY() * TAMANHO_CARTELA);
@@ -503,7 +688,8 @@ export class TelaPartida extends Phaser.Scene {
     // A prévia fica avermelhada quando a cartela, do jeito que está girada, não encaixa na casa.
     private pintarFantasma(): void {
         const casa = this.casaSobMouse;
-        if (this.cartelaAtual && casa && this.tabuleiro.podeColocar(this.cartelaAtual, casa)) {
+        const cartela = this.jogo.getCartelaAtual();
+        if (cartela && casa && this.jogo.getTabuleiro().podeColocar(cartela, casa)) {
             this.fantasmaImagem.clearTint();
         } else {
             this.fantasmaImagem.setTint(VERMELHO_SUAVE);
@@ -548,10 +734,14 @@ export class TelaPartida extends Phaser.Scene {
             texto.textContent = 'Passe o mouse sobre uma cartela.';
             return;
         }
+        if (this.pendente?.posicao.igual(casa)) {
+            texto.textContent = 'Esta cartela ainda não foi confirmada.';
+            return;
+        }
 
         const segmento = segmentoMaisProximo(item.cartela, this.cameras.main.getWorldPoint(ponteiro.x, ponteiro.y), casa);
         const tipo = NOME_DO_TIPO[segmento.getTipo()];
-        const regiao = this.tabuleiro.regiaoDe(segmento);
+        const regiao = this.jogo.getTabuleiro().regiaoDe(segmento);
         const cartelas = regiao.numCartelasDistintas();
         texto.textContent = `${tipo} · ${cartelas} ${cartelas === 1 ? 'cartela' : 'cartelas'} · `
             + `${regiao.estaConcluida() ? 'concluída' : 'aberta'}${regiao.estaOcupada() ? ' · com seguidor' : ''}`;

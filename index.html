@@ -29,6 +29,8 @@
           </div>
         </header>
 
+        <p id="vez" class="vez" aria-live="polite"></p>
+
         <section class="mao" aria-labelledby="mao-titulo">
           <h2 id="mao-titulo">Cartela da vez</h2>
           <div class="moldura">
@@ -65,6 +67,16 @@
           <h2 id="jogadores-titulo">Placar</h2>
           <ol id="lista-jogadores" class="lista-jogadores"></ol>
         </section>
+
+        <section class="registro" aria-labelledby="registro-titulo">
+          <h2 id="registro-titulo">Últimas jogadas</h2>
+          <ol id="registro" class="lista-registro"></ol>
+        </section>
+
+        <div class="acoes-partida">
+          <button id="reiniciar" class="botao botao-secundario" type="button">Reiniciar</button>
+          <button id="abandonar" class="botao botao-secundario" type="button">Abandonar</button>
+        </div>
 
         <p class="dica">Clique numa casa verde para colocar a cartela e depois num círculo para pôr um seguidor. Arraste o tabuleiro para mover e use a roda do mouse para aproximar.</p>
       </aside>
@@ -148,6 +160,24 @@
 
       <div class="acoes">
         <button id="fechar-ajuda" class="botao botao-secundario" type="button">Voltar ao jogo</button>
+      </div>
+    </dialog>
+
+    <dialog id="confirmar" class="dialogo" aria-labelledby="confirmar-titulo">
+      <h2 id="confirmar-titulo" class="titulo-secao"></h2>
+      <p id="confirmar-texto" class="nota"></p>
+      <div class="acoes acoes-lado-a-lado">
+        <button id="confirmar-nao" class="botao botao-secundario" type="button" autofocus>Continuar jogando</button>
+        <button id="confirmar-sim" class="botao botao-principal" type="button"></button>
+      </div>
+    </dialog>
+
+    <dialog id="resultado" class="dialogo" aria-labelledby="resultado-titulo">
+      <h2 id="resultado-titulo" class="titulo-secao"></h2>
+      <ol id="resultado-lista" class="resultado-lista"></ol>
+      <div class="acoes acoes-lado-a-lado">
+        <button id="resultado-menu" class="botao botao-secundario" type="button">Menu</button>
+        <button id="resultado-de-novo" class="botao botao-principal" type="button">Jogar de novo</button>
       </div>
     </dialog>
 

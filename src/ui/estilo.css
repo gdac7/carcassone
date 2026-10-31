@@ -26,7 +26,8 @@
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
 }
@@ -392,6 +393,77 @@ kbd {
   color: var(--ouro);
 }
 
+.vez {
+  margin: -12px 0 -8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.lista-registro {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.lista-registro li {
+  padding-left: 10px;
+  border-left: 3px solid var(--cor-jogador, var(--linha));
+}
+
+.lista-registro .registro-vazio {
+  color: var(--salvia);
+  border-left-color: transparent;
+}
+
+.acoes-partida {
+  display: flex;
+  gap: 10px;
+}
+
+.acoes-partida .botao {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 1rem;
+}
+
+.resultado-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resultado-lista li {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+.resultado-lista li.vencedor {
+  background: var(--realce);
+  border-left: 3px solid var(--ouro);
+}
+
+.resultado-lista .nome {
+  font-weight: 500;
+}
+
+.resultado-lista .pontos {
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
 .dica {
   margin: auto 0 0;
   font-size: 0.85rem;
@@ -567,6 +639,21 @@ kbd {
   background: var(--petroleo-fundo);
   border: 1px solid var(--linha);
   border-radius: 4px;
+}
+
+.nomes-jogadores select {
+  padding: 8px 6px;
+  font-size: 0.95rem;
+  color: var(--texto);
+  background: var(--petroleo-fundo);
+  border: 1px solid var(--linha);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.nomes-jogadores select:focus-visible {
+  outline: none;
+  border-color: var(--ouro);
 }
 
 .nomes-jogadores input::placeholder {
