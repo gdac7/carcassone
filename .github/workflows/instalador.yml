@@ -1,0 +1,54 @@
+# Gera os instaladores de Windows, macOS e Linux e os anexa à release.
+# Pela aba Actions ("Run workflow"), gera sem release: os arquivos ficam na página da execução.
+name: Instaladores
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  instalador:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run instalador -- --publish never
+
+      # Cada sistema gera um tipo de arquivo; o laço anexa só os que existem.
+      - name: Anexar à release
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for arquivo in release/*.exe release/*.dmg release/*.AppImage release/*.deb; do
+            if [ -f "$arquivo" ]; then
+              gh release upload "${{ github.event.release.tag_name }}" "$arquivo" --clobber
+            fi
+          done
+
+      - name: Guardar na execução
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v5
+        with:
+          name: instalador-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+          if-no-files-found: ignore
