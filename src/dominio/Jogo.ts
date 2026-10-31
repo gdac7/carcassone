@@ -18,6 +18,8 @@ export class Jogo {
     private monte: MonteDeCartelas;
     private observadores: ObservadorJogo[];
     private historico: Jogada[];
+    private inicio: Date;
+    private ordemDoMonte: string[];
 
     constructor() {
         this.rodadaAtual = 0;
@@ -28,9 +30,27 @@ export class Jogo {
         this.monte = new MonteDeCartelas();
         this.observadores = [];
         this.historico = [];
+        this.inicio = new Date();
+        this.ordemDoMonte = [];
     }
 
     iniciarPartida(jogadores: Jogador[]): void {
+        this.prepararPartida(jogadores, new Date());
+        this.monte.embaralhar();
+        this.ordemDoMonte = this.monte.getOrdem();
+        this.sortearOrdem();
+        this.proximoTurno();
+    }
+
+    // Recomeça uma partida salva: usa a ordem do monte e dos jogadores gravadas, em vez de sortear.
+    retomarPartida(jogadores: Jogador[], ordemDoMonte: string[], inicio: Date): void {
+        this.prepararPartida(jogadores, inicio);
+        this.monte.ordenar(ordemDoMonte);
+        this.ordemDoMonte = [...ordemDoMonte];
+        this.proximoTurno();
+    }
+
+    private prepararPartida(jogadores: Jogador[], inicio: Date): void {
         if (jogadores.length < 2 || jogadores.length > 5) {
             throw new Error('A partida precisa de 2 a 5 jogadores');
         }
@@ -40,12 +60,10 @@ export class Jogo {
         this.historico = [];
         this.rodadaAtual = 0;
         this.jogadorDaVez = null;
+        this.inicio = inicio;
 
         this.monte.criarCartelasPadrao();
-        this.monte.embaralhar();
         this.tabuleiro.colocarCartela(this.monte.retirarCartelaInicial(), new Posicao(0, 0));
-        this.sortearOrdem();
-        this.proximoTurno();
     }
 
     // O manual manda começar pelo mais jovem; o sistema não sabe a idade, então sorteia.
@@ -171,5 +189,13 @@ export class Jogo {
 
     getHistorico(): Jogada[] {
         return this.historico;
+    }
+
+    getInicio(): Date {
+        return this.inicio;
+    }
+
+    getOrdemDoMonte(): string[] {
+        return this.ordemDoMonte;
     }
 }

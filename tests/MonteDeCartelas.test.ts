@@ -102,3 +102,33 @@ describe('MonteDeCartelas.embaralhar', () => {
     expect(embaralhado).not.toBe(semEmbaralhar);
   });
 });
+
+describe('MonteDeCartelas.getOrdem e ordenar', () => {
+  test('getOrdem lista os ids de baixo para cima: o último é a próxima cartela puxada', () => {
+    const monte = monteCriado();
+    monte.embaralhar();
+    const ordem = monte.getOrdem();
+    expect(ordem).toHaveLength(71);
+    expect(monte.puxarCartela().getId()).toBe(ordem[70]);
+    expect(monte.getOrdem()).toEqual(ordem.slice(0, 70));
+  });
+
+  test('ordenar deixa o monte exatamente na ordem dada', () => {
+    const original = monteCriado();
+    original.embaralhar();
+    const ordem = original.getOrdem();
+
+    const copia = monteCriado();
+    copia.ordenar(ordem);
+
+    expect(copia.getOrdem()).toEqual(ordem);
+    expect(puxarTodas(copia).map((c) => c.getId())).toEqual(puxarTodas(original).map((c) => c.getId()));
+  });
+
+  test('ordenar recusa uma lista que não tem exatamente as cartelas do monte', () => {
+    const ordem = monteCriado().getOrdem();
+    expect(() => monteCriado().ordenar(ordem.slice(1))).toThrow();               // falta uma
+    expect(() => monteCriado().ordenar([...ordem, 'A'])).toThrow();              // sobra uma
+    expect(() => monteCriado().ordenar(['X', ...ordem.slice(1)])).toThrow();     // troca uma por outra
+  });
+});

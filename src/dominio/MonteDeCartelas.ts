@@ -59,4 +59,27 @@ export class MonteDeCartelas {
     getQuantidade(): number {
         return this.cartelas.length;
     }
+
+    getOrdem(): string[]{
+        return this.cartelas.map(
+            (c) => c.getId()
+        );
+    }
+
+    // Deixa o monte na ordem dada (a de uma partida salva).
+    ordenar(ids: string[]): void {
+        const restantes = [...this.cartelas];
+        const novaOrdem: Cartela[] = [];
+        for (const id of ids) {
+            const i = restantes.findIndex((c) => c.getId() === id);
+            if (i === -1) {
+                throw new Error(`Não há cartela ${id} sobrando no monte`);
+            }
+            novaOrdem.push(restantes.splice(i, 1)[0]);
+        }
+        if (restantes.length > 0) {
+            throw new Error('A ordem dada não tem todas as cartelas do monte');
+        }
+        this.cartelas = novaOrdem;
+    }
 }
