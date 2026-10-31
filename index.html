@@ -48,6 +48,13 @@
           <p class="atalho">Teclas: <kbd>Q</kbd> gira para a esquerda, <kbd>E</kbd> para a direita.</p>
           <p id="monte" class="monte"></p>
           <p id="aviso" class="aviso" role="status" hidden></p>
+          <div id="fase-seguidor" class="fase-seguidor" hidden>
+            <p id="fase-seguidor-texto">Coloque um seguidor na cartela ou pule.</p>
+            <button id="pular" class="botao botao-secundario" type="button" title="Pular (Espaço)">
+              <span class="icone icone-pular" aria-hidden="true"></span>
+              Pular
+            </button>
+          </div>
           <p id="depuracao" class="depuracao" hidden>
             <strong>Depuração</strong>
             <span id="depuracao-regiao">Passe o mouse sobre uma cartela.</span>
@@ -59,7 +66,7 @@
           <ol id="lista-jogadores" class="lista-jogadores"></ol>
         </section>
 
-        <p class="dica">Clique numa casa verde para colocar a cartela. Arraste o tabuleiro para mover e use a roda do mouse para aproximar.</p>
+        <p class="dica">Clique numa casa verde para colocar a cartela e depois num círculo para pôr um seguidor. Arraste o tabuleiro para mover e use a roda do mouse para aproximar.</p>
       </aside>
     </main>
 
@@ -134,6 +141,7 @@
       <ul class="controles">
         <li><kbd>Q</kbd> <kbd>E</kbd> giram a cartela</li>
         <li>Arraste para mover o tabuleiro; a roda do mouse aproxima</li>
+        <li>Depois de colocar a cartela, clique num círculo para pôr um seguidor; <kbd>Espaço</kbd> pula</li>
         <li><kbd>H</kbd> abre esta ajuda</li>
         <li><kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd> liga a depuração: realça a região sob o mouse</li>
       </ul>

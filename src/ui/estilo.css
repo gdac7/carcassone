@@ -339,6 +339,42 @@ kbd {
   border-radius: 4px;
 }
 
+.aviso.informativo {
+  background: var(--realce);
+  border-color: var(--petroleo-claro);
+}
+
+.fase-seguidor {
+  margin: 12px 0 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 4px;
+}
+
+.fase-seguidor p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.fase-seguidor .botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  font-size: 1rem;
+}
+
+.icone-pular {
+  width: 16px;
+  height: 16px;
+  mask-image: url('/icons/skip.png');
+}
+
 .depuracao {
   margin: 12px 0 0;
   padding: 10px 12px;
