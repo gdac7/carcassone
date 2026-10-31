@@ -115,6 +115,29 @@ describe('Tabuleiro.podeColocar', () => {
   });
 });
 
+describe('Tabuleiro.numVizinhasComDiagonais', () => {
+  test('conta as 8 casas ao redor, incluindo as diagonais', () => {
+    const t = new Tabuleiro();
+    const centro = cartela('B');
+    t.colocarCartela(centro, new Posicao(0, 0));
+    expect(t.numVizinhasComDiagonais(centro)).toBe(0);
+
+    t.colocarCartela(cartela('B'), new Posicao(1, 0));
+    t.colocarCartela(cartela('B'), new Posicao(0, 1));
+    t.colocarCartela(cartela('B'), new Posicao(1, 1)); // diagonal
+    expect(t.numVizinhasComDiagonais(centro)).toBe(3);
+  });
+
+  test('não conta casas a duas de distância', () => {
+    const t = new Tabuleiro();
+    const centro = cartela('B');
+    t.colocarCartela(centro, new Posicao(0, 0));
+    t.colocarCartela(cartela('B'), new Posicao(1, 0));
+    t.colocarCartela(cartela('B'), new Posicao(2, 0));
+    expect(t.numVizinhasComDiagonais(centro)).toBe(1);
+  });
+});
+
 describe('Tabuleiro.vizinhas', () => {
   test('devolve as cartelas encostadas nos 4 lados', () => {
     const t = comInicial();
