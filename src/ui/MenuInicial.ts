@@ -23,6 +23,10 @@ export class MenuInicial extends Phaser.Scene {
         }
         this.load.image('brasao', 'emblem.png');
         this.load.image('destaque', 'highlight.png');
+        this.load.image('seguidor-ESTRADA', 'meeple/meeple_road_template.png');
+        this.load.image('seguidor-CIDADE', 'meeple/meeple_castle_template.png');
+        this.load.image('seguidor-CAMPO', 'meeple/meeple_fields_template.png');
+        this.load.image('seguidor-MOSTEIRO', 'meeple/meeple_monastery_template.png');
     }
 
     create(): void {

@@ -44,6 +44,11 @@ export class TelaPartida extends Phaser.Scene {
     private depuracao = false;
     private arrastando = false;
     private casaSobMouse: Posicao | null = null;
+    // Cada turno tem duas fases: colocar a cartela e, depois, o seguidor (opcional).
+    private fase: 'cartela' | 'seguidor' = 'cartela';
+    private daVez = 0;
+    private opcoesSeguidor: Phaser.GameObjects.GameObject[] = [];
+    private seguidores: { segmento: Segmento; imagem: Phaser.GameObjects.Container }[] = [];
     private temporizadorAviso: number | undefined;
 
     constructor() {
@@ -60,6 +65,10 @@ export class TelaPartida extends Phaser.Scene {
         this.validas = new Set();
         this.destaques = [];
         this.depuracao = false;
+        this.fase = 'cartela';
+        this.daVez = 0;
+        this.opcoesSeguidor = [];
+        this.seguidores = [];
         this.cartelaAtual = null;
     }
 
@@ -84,6 +93,7 @@ export class TelaPartida extends Phaser.Scene {
         this.configurarGiros();
         this.configurarAjuda();
         this.configurarDepuracao();
+        this.configurarSeguidor();
 
         this.puxarCartela();
         this.exibirPlacar();
@@ -95,7 +105,7 @@ export class TelaPartida extends Phaser.Scene {
             const pontos = jogador.getPontuacao();
             const reserva = jogador.getQuantidadeNaReserva();
             const item = document.createElement('li');
-            item.className = i === 0 ? 'jogador da-vez' : 'jogador';
+            item.className = i === this.daVez ? 'jogador da-vez' : 'jogador';
             item.style.setProperty('--cor-jogador', COR_HEX[jogador.getCor()]);
             item.innerHTML = `
                 <span class="meeple" aria-hidden="true"></span>
@@ -263,7 +273,7 @@ export class TelaPartida extends Phaser.Scene {
 
     private configurarColocacao(): void {
         this.input.on('pointerup', (ponteiro: Phaser.Input.Pointer) => {
-            if (this.arrastando || !this.cartelaAtual) return;
+            if (this.arrastando || !this.cartelaAtual || this.fase !== 'cartela') return;
             const casa = this.casaSob(ponteiro);
             if (this.desenhadas.has(casa.chave())) return;
 
@@ -283,7 +293,121 @@ export class TelaPartida extends Phaser.Scene {
 
             this.desenharCartela(this.cartelaAtual, casa, true);
             som.tocarColocar();
-            this.puxarCartela();
+            this.iniciarFaseSeguidor(this.cartelaAtual, casa);
+        });
+    }
+
+    private configurarSeguidor(): void {
+        const pular = document.getElementById('pular')!;
+        const aoPular = () => {
+            if (this.fase === 'seguidor') this.encerrarTurno();
+        };
+        pular.addEventListener('click', aoPular);
+        this.input.keyboard?.on('keydown-SPACE', () => {
+            if (!algumDialogoAberto()) aoPular();
+        });
+        this.events.once('shutdown', () => {
+            pular.removeEventListener('click', aoPular);
+            document.getElementById('fase-seguidor')!.hidden = true;
+        });
+    }
+
+    // Um círculo em cada segmento da cartela recém-colocada; os de zona já ocupada ficam apagados.
+    private iniciarFaseSeguidor(cartela: Cartela, casa: Posicao): void {
+        const jogador = this.jogadores[this.daVez];
+        if (jogador.getQuantidadeNaReserva() === 0) {
+            this.avisar(`${jogador.getNome()} não tem seguidores na reserva.`);
+            this.encerrarTurno();
+            return;
+        }
+
+        this.fase = 'seguidor';
+        this.fantasma.setVisible(false);
+        this.destaques.forEach((d) => d.destroy());
+        this.destaques = [];
+        document.querySelectorAll<HTMLButtonElement>('.botao-giro').forEach((b) => (b.disabled = true));
+        document.getElementById('fase-seguidor-texto')!.textContent =
+            `${jogador.getNome()}, coloque um seguidor na cartela ou pule.`;
+        document.getElementById('fase-seguidor')!.hidden = false;
+
+        const cx = casa.getX() * TAMANHO_CARTELA;
+        const cy = casa.getY() * TAMANHO_CARTELA;
+        for (const [segmento, [px, py]] of posicoesDosSeguidores(cartela)) {
+            const x = cx + px * TAMANHO_CARTELA;
+            const y = cy + py * TAMANHO_CARTELA;
+            const livre = !this.tabuleiro.regiaoDe(segmento).estaOcupada();
+            const circulo = this.add.circle(0, 0, 13, livre ? 0xc8a66a : 0x2b2f33, livre ? 0.95 : 0.6)
+                .setStrokeStyle(2, livre ? 0x2b2f33 : 0xe39486, 1);
+            const icone = this.add.image(0, 0, `seguidor-${segmento.getTipo()}`).setScale(0.7)
+                .setTintFill(livre ? 0x2b2f33 : 0xe39486);
+            const opcao = this.add.container(x, y, [circulo, icone]).setDepth(20).setSize(30, 30);
+            if (livre) {
+                opcao.setInteractive({ useHandCursor: true })
+                    .on('pointerover', () => opcao.setScale(1.15))
+                    .on('pointerout', () => opcao.setScale(1))
+                    .on('pointerup', () => this.colocarSeguidor(segmento, x, y));
+            }
+            this.opcoesSeguidor.push(opcao);
+        }
+    }
+
+    private colocarSeguidor(segmento: Segmento, x: number, y: number): void {
+        if (this.arrastando || this.fase !== 'seguidor') return;
+        const jogador = this.jogadores[this.daVez];
+        const meeple = jogador.retirarMeeple();
+        if (!meeple) return;
+        this.tabuleiro.regiaoDe(segmento).adicionarMeeple(meeple);
+
+        const textura = `seguidor-${segmento.getTipo()}`;
+        const sombra = this.add.image(1.5, 2, textura).setTintFill(0x000000).setAlpha(0.5);
+        const figura = this.add.image(0, 0, textura).setTintFill(Number.parseInt(COR_HEX[jogador.getCor()].slice(1), 16));
+        const imagem = this.add.container(x, y, [sombra, figura]).setDepth(15).setScale(1.1);
+        if (DURACAO > 0) {
+            imagem.setScale(1.6).setAlpha(0);
+            this.tweens.add({ targets: imagem, scale: 1.1, alpha: 1, duration: DURACAO, ease: 'Back.Out' });
+        }
+        this.seguidores.push({ segmento, imagem });
+        som.tocarColocar();
+        this.encerrarTurno();
+    }
+
+    // Provisório até o Jogo: a tela pontua as regiões concluídas e passa a vez.
+    private encerrarTurno(): void {
+        this.fase = 'cartela';
+        this.opcoesSeguidor.forEach((o) => o.destroy());
+        this.opcoesSeguidor = [];
+        document.getElementById('fase-seguidor')!.hidden = true;
+        document.querySelectorAll<HTMLButtonElement>('.botao-giro').forEach((b) => (b.disabled = false));
+
+        const pontuacoes: string[] = [];
+        for (const regiao of this.tabuleiro.regioesConcluidas()) {
+            if (!regiao.estaOcupada()) continue;
+            const nomes = regiao.jogadoresComMaioria().map((j) => j.getNome()).join(' e ');
+            const tipo = NOME_DO_TIPO[regiao.getSegmentos()[0].getTipo()];
+            pontuacoes.push(`${tipo} concluída: ${nomes} +${regiao.calcularPontos(false)}`);
+            regiao.pontuar(false);
+        }
+        this.retirarSeguidoresDevolvidos();
+        if (pontuacoes.length > 0) this.avisar(pontuacoes.join('. ') + '.', true);
+
+        this.daVez = (this.daVez + 1) % this.jogadores.length;
+        this.exibirPlacar();
+        this.puxarCartela();
+    }
+
+    // Depois de pontuar, a região fica sem meeples: as figuras dela saem do tabuleiro.
+    private retirarSeguidoresDevolvidos(): void {
+        this.seguidores = this.seguidores.filter(({ segmento, imagem }) => {
+            if (this.tabuleiro.regiaoDe(segmento).estaOcupada()) return true;
+            if (DURACAO > 0) {
+                this.tweens.add({
+                    targets: imagem, y: imagem.y - 24, alpha: 0, duration: DURACAO * 3, ease: 'Quad.In',
+                    onComplete: () => imagem.destroy(),
+                });
+            } else {
+                imagem.destroy();
+            }
+            return false;
         });
     }
 
@@ -309,7 +433,7 @@ export class TelaPartida extends Phaser.Scene {
 
     private configurarGiros(): void {
         const girar = (vezes: number) => {
-            if (!this.cartelaAtual || algumDialogoAberto()) return;
+            if (!this.cartelaAtual || this.fase !== 'cartela' || algumDialogoAberto()) return;
             for (let i = 0; i < vezes; i++) this.cartelaAtual.girar();
             som.tocarGirar();
             this.atualizarCartelaDaVez(vezes === 1 ? -90 : 90);
@@ -369,7 +493,7 @@ export class TelaPartida extends Phaser.Scene {
     private mostrarFantasma(ponteiro: Phaser.Input.Pointer): void {
         const casa = this.casaSob(ponteiro);
         this.casaSobMouse = casa;
-        const livre = this.cartelaAtual !== null && !this.desenhadas.has(casa.chave());
+        const livre = this.cartelaAtual !== null && this.fase === 'cartela' && !this.desenhadas.has(casa.chave());
         this.fantasma
             .setVisible(livre)
             .setPosition(casa.getX() * TAMANHO_CARTELA, casa.getY() * TAMANHO_CARTELA);
@@ -393,9 +517,10 @@ export class TelaPartida extends Phaser.Scene {
         }
     }
 
-    private avisar(mensagem: string): void {
+    private avisar(mensagem: string, informativo = false): void {
         const aviso = document.getElementById('aviso')!;
         aviso.textContent = mensagem;
+        aviso.classList.toggle('informativo', informativo);
         aviso.hidden = false;
         window.clearTimeout(this.temporizadorAviso);
         this.temporizadorAviso = window.setTimeout(() => (aviso.hidden = true), DURACAO_AVISO);
@@ -457,6 +582,33 @@ export class TelaPartida extends Phaser.Scene {
 // Com um diálogo aberto, as teclas do jogo não devem agir no tabuleiro por trás dele.
 function algumDialogoAberto(): boolean {
     return document.querySelector('dialog[open]') !== null;
+}
+
+// Onde fica o seguidor de cada segmento: perto do centro do terreno, sem dois no mesmo lugar.
+// O mosteiro fica no meio; se o lugar já estiver tomado, vai para o ponto de borda mais livre.
+function posicoesDosSeguidores(cartela: Cartela): Map<Segmento, [number, number]> {
+    const prioridade = { [TipoTerreno.MOSTEIRO]: 0, [TipoTerreno.CIDADE]: 1, [TipoTerreno.ESTRADA]: 1, [TipoTerreno.CAMPO]: 2 };
+    const segmentos = [...cartela.getSegmentos()].sort((a, b) => prioridade[a.getTipo()] - prioridade[b.getTipo()]);
+    const usadas: [number, number][] = [];
+    const distanciaAteUsadas = ([x, y]: [number, number]) =>
+        Math.min(Infinity, ...usadas.map(([ux, uy]) => Math.hypot(x - ux, y - uy)));
+
+    const posicoes = new Map<Segmento, [number, number]>();
+    for (const segmento of segmentos) {
+        const pontos = segmento.pontosAtuais().map((p) => POSICAO_DO_PONTO[String(p)]);
+        let posicao: [number, number] = [0, 0];
+        if (pontos.length > 0) {
+            const media = (i: 0 | 1) => pontos.reduce((soma, ponto) => soma + ponto[i], 0) / pontos.length;
+            posicao = [media(0) * 0.6, media(1) * 0.6];
+            if (distanciaAteUsadas(posicao) < 0.2) {
+                const candidatas = pontos.map(([x, y]): [number, number] => [x * 0.7, y * 0.7]);
+                posicao = candidatas.reduce((melhor, c) => (distanciaAteUsadas(c) > distanciaAteUsadas(melhor) ? c : melhor));
+            }
+        }
+        usadas.push(posicao);
+        posicoes.set(segmento, posicao);
+    }
+    return posicoes;
 }
 
 // O ponto de borda mais perto do mouse escolhe o segmento; no miolo de um mosteiro, o próprio mosteiro.
