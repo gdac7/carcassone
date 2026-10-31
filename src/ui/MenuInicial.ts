@@ -106,7 +106,7 @@ export class MenuInicial extends Phaser.Scene {
             }
         }
         this.cameras.main.postFX?.addBlur(1, 2, 2, 1.2);
-        this.add.rectangle(0, 0, largura, altura, 0x1b130e, 0.55)
+        this.add.rectangle(0, 0, largura, altura, 0x2b2f33, 0.6)
             .setOrigin(0).setScrollFactor(0);
 
         if (!MOVIMENTO_REDUZIDO) {

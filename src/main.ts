@@ -12,7 +12,7 @@ ligarConfiguracoes();
 new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'tabuleiro',
-    backgroundColor: '#3a2b22',
+    backgroundColor: '#2b2f33',
     banner: false,
     scale: { mode: Phaser.Scale.RESIZE },
     scene: [MenuInicial, TelaPartida],
