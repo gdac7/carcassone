@@ -290,7 +290,7 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
         const cor = Number.parseInt(COR_HEX[jogador.getCor()].slice(1), 16);
         const x = posicao.getX() * TAMANHO_CARTELA - TAMANHO_CARTELA / 2;
         const y = posicao.getY() * TAMANHO_CARTELA - TAMANHO_CARTELA / 2;
-        this.realceUltima.clear().lineStyle(4, cor, 0.95).strokeRect(x - 2, y - 2, TAMANHO_CARTELA + 4, TAMANHO_CARTELA + 4);
+        this.realceUltima.clear().lineStyle(3, cor, 0.6).strokeRect(x - 2, y - 2, TAMANHO_CARTELA + 4, TAMANHO_CARTELA + 4);
     }
 
     // Quem ganhou pontos desde o último aviso.
