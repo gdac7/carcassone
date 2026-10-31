@@ -6,8 +6,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-  push:
-    branches: [feat/instalador]   # temporário: só para testar antes do merge
 
 permissions:
   contents: write
@@ -19,9 +17,9 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -37,7 +35,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for arquivo in release/*.exe release/*.dmg release/*.AppImage; do
+          for arquivo in release/*.exe release/*.dmg release/*.AppImage release/*.deb; do
             if [ -f "$arquivo" ]; then
               gh release upload "${{ github.event.release.tag_name }}" "$arquivo" --clobber
             fi
@@ -45,11 +43,12 @@ jobs:
 
       - name: Guardar na execução
         if: github.event_name != 'release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: instalador-${{ matrix.os }}
           path: |
             release/*.exe
             release/*.dmg
             release/*.AppImage
+            release/*.deb
           if-no-files-found: ignore
