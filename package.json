@@ -1,21 +1,51 @@
 {
   "name": "carcassone",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
+  "description": "Versão digital do jogo de tabuleiro Carcassonne",
+  "author": "Gabriel Campos, Júlia Staudohar, Júlia Vogel e Victor Miranda",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "app": "npm run build && electron .",
+    "instalador": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "br.faculdade.carcassonne",
+    "productName": "Carcassonne",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "linux": {
+      "target": "AppImage",
+      "category": "Game"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.board-games"
+    }
   },
   "devDependencies": {
+    "@fontsource/alegreya": "^5.3.0",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "phaser": "^3.90.0",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
-  "dependencies": {
-    "@fontsource/alegreya": "^5.3.0",
-    "phaser": "^3.90.0"
+  "allowScripts": {
+    "electron@45.2.1": true
   }
 }
