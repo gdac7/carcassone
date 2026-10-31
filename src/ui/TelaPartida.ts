@@ -134,7 +134,7 @@ export class TelaPartida extends Phaser.Scene {
         }
 
         const margem = 6;
-        this.casasLivres.clear().lineStyle(1, 0xc9a227, 0.22);
+        this.casasLivres.clear().lineStyle(1, 0xc8a66a, 0.3);
         for (const p of livres.values()) {
             this.casasLivres.strokeRoundedRect(
                 p.getX() * TAMANHO_CARTELA - TAMANHO_CARTELA / 2 + margem,

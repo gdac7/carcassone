@@ -1,12 +1,18 @@
 :root {
-  --nogueira: #3a2b22;
-  --nogueira-escura: #241a14;
-  --nogueira-funda: #1b130e;
-  --pergaminho: #ede3cf;
-  --pergaminho-apagado: #b9aa90;
-  --ouro: #c9a227;
-  --ouro-tenue: rgba(201, 162, 39, 0.35);
-  --azul-heraldico: #4a6fb5;
+  /* Paleta */
+  --carvao: #2b2f33;
+  --petroleo: #1f4f4a;
+  --petroleo-claro: #2f7c77;
+  --salvia: #a8b8b0;
+  --ouro: #c8a66a;
+
+  /* Derivadas da paleta */
+  --texto: #eef1ee;
+  --petroleo-fundo: #234543;
+  --ouro-claro: #d6b87f;
+  --ouro-tenue: rgba(200, 166, 106, 0.35);
+  --realce: rgba(47, 124, 119, 0.35);
+  --linha: rgba(168, 184, 176, 0.15);
 
   --fonte: 'Alegreya', Georgia, serif;
 }
@@ -34,8 +40,8 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--nogueira);
-  color: var(--pergaminho);
+  background: var(--carvao);
+  color: var(--texto);
   font-family: var(--fonte);
 }
 
@@ -68,7 +74,7 @@ body {
   gap: 28px;
   padding: 28px 26px;
   overflow-y: auto;
-  background: var(--nogueira-escura);
+  background: var(--petroleo);
   border-left: 1px solid var(--ouro-tenue);
 }
 
@@ -99,12 +105,12 @@ body {
 .botao-icone svg {
   width: 22px;
   height: 22px;
-  fill: var(--pergaminho-apagado);
+  fill: var(--salvia);
   transition: fill 120ms ease;
 }
 
 .botao-icone:hover {
-  background: rgba(201, 162, 39, 0.12);
+  background: var(--realce);
 }
 
 .botao-icone:hover svg {
@@ -112,7 +118,7 @@ body {
 }
 
 .botao-icone:focus-visible {
-  outline: 2px solid var(--azul-heraldico);
+  outline: 2px solid var(--ouro);
   outline-offset: 2px;
 }
 
@@ -128,7 +134,7 @@ h2 {
   margin: 0 0 12px;
   font-size: 1.125rem;
   font-weight: 500;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 /* Cartela da vez */
@@ -141,7 +147,7 @@ h2 {
   padding: 12px;
   display: grid;
   place-items: center;
-  background: var(--nogueira-funda);
+  background: var(--petroleo-fundo);
   border: 1px solid var(--ouro-tenue);
   border-radius: 6px;
 }
@@ -180,7 +186,7 @@ h2 {
 }
 
 .botao-giro:hover {
-  background: rgba(201, 162, 39, 0.12);
+  background: var(--realce);
 }
 
 .botao-giro:active {
@@ -193,7 +199,7 @@ h2 {
 }
 
 .botao-giro:focus-visible {
-  outline: 2px solid var(--azul-heraldico);
+  outline: 2px solid var(--ouro);
   outline-offset: 3px;
 }
 
@@ -218,7 +224,7 @@ h2 {
   margin: 10px 0 0;
   text-align: center;
   font-size: 0.85rem;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 kbd {
@@ -229,7 +235,7 @@ kbd {
   font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.4;
-  color: var(--pergaminho);
+  color: var(--texto);
   border: 1px solid var(--ouro-tenue);
   border-radius: 3px;
 }
@@ -238,7 +244,7 @@ kbd {
   margin: 8px 0 0;
   text-align: center;
   font-size: 0.95rem;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 /* Jogadores */
@@ -264,7 +270,7 @@ kbd {
 }
 
 .jogador.da-vez {
-  background: rgba(237, 227, 207, 0.06);
+  background: var(--realce);
   border-left-color: var(--ouro);
 }
 
@@ -301,7 +307,7 @@ kbd {
 .jogador .pontos small {
   font-size: 0.75rem;
   font-weight: 400;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 /* Destaca a pontuação que acabou de subir. */
@@ -318,14 +324,14 @@ kbd {
 
 .jogador .reserva {
   font-size: 0.85rem;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 .dica {
   margin: auto 0 0;
   font-size: 0.85rem;
   line-height: 1.45;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 /* Menu inicial */
@@ -342,7 +348,7 @@ kbd {
   width: min(460px, 100%);
   padding: 44px 48px 40px;
   text-align: center;
-  background: rgba(36, 26, 20, 0.94);
+  background: rgba(31, 79, 74, 0.94);
   border: 1px solid var(--ouro-tenue);
   border-radius: 8px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
@@ -368,7 +374,7 @@ kbd {
   margin: 0 0 20px;
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--pergaminho);
+  color: var(--texto);
 }
 
 .acoes {
@@ -401,18 +407,18 @@ kbd {
 }
 
 .botao:focus-visible {
-  outline: 2px solid var(--azul-heraldico);
+  outline: 2px solid var(--ouro);
   outline-offset: 3px;
 }
 
 .botao-principal {
-  color: var(--nogueira-funda);
+  color: var(--carvao);
   background: var(--ouro);
   border: 1px solid var(--ouro);
 }
 
 .botao-principal:hover {
-  background: #d9b33a;
+  background: var(--ouro-claro);
 }
 
 .botao-secundario {
@@ -422,7 +428,7 @@ kbd {
 
 .botao-secundario:hover {
   border-color: var(--ouro);
-  background: rgba(201, 162, 39, 0.08);
+  background: var(--realce);
 }
 
 .quantidade {
@@ -437,7 +443,7 @@ kbd {
 .quantidade legend {
   width: 100%;
   margin-bottom: 12px;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 .quantidade input {
@@ -459,17 +465,17 @@ kbd {
 }
 
 .quantidade span:hover {
-  background: rgba(201, 162, 39, 0.12);
+  background: var(--realce);
 }
 
 .quantidade input:checked + span {
-  color: var(--nogueira-funda);
+  color: var(--carvao);
   background: var(--ouro);
   border-color: var(--ouro);
 }
 
 .quantidade input:focus-visible + span {
-  outline: 2px solid var(--azul-heraldico);
+  outline: 2px solid var(--ouro);
   outline-offset: 3px;
 }
 
@@ -493,13 +499,13 @@ kbd {
   min-width: 0;
   padding: 8px 12px;
   font-size: 1.05rem;
-  background: var(--nogueira-funda);
-  border: 1px solid rgba(237, 227, 207, 0.15);
+  background: var(--petroleo-fundo);
+  border: 1px solid var(--linha);
   border-radius: 4px;
 }
 
 .nomes-jogadores input::placeholder {
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
   opacity: 0.7;
 }
 
@@ -513,15 +519,15 @@ kbd {
 .dialogo {
   width: min(400px, calc(100% - 32px));
   padding: 32px 36px;
-  color: var(--pergaminho);
-  background: var(--nogueira-escura);
+  color: var(--texto);
+  background: var(--petroleo);
   border: 1px solid var(--ouro-tenue);
   border-radius: 8px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
 }
 
 .dialogo::backdrop {
-  background: rgba(27, 19, 14, 0.6);
+  background: rgba(43, 47, 51, 0.7);
 }
 
 .controle {
@@ -586,12 +592,12 @@ kbd {
   padding: 8px 10px;
   text-align: left;
   vertical-align: top;
-  border-bottom: 1px solid rgba(237, 227, 207, 0.1);
+  border-bottom: 1px solid var(--linha);
 }
 
 .tabela-pontos thead th {
   font-weight: 500;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
   border-bottom-color: var(--ouro-tenue);
 }
 
@@ -612,7 +618,7 @@ kbd {
   .tabela-pontos tr {
     display: block;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(237, 227, 207, 0.1);
+    border-bottom: 1px solid var(--linha);
   }
 
   .tabela-pontos th,
@@ -624,7 +630,7 @@ kbd {
 
   .tabela-pontos td::before {
     content: attr(data-rotulo) ': ';
-    color: var(--pergaminho-apagado);
+    color: var(--salvia);
   }
 }
 
@@ -632,7 +638,7 @@ kbd {
   margin: 12px 0 0;
   font-size: 0.95rem;
   line-height: 1.45;
-  color: var(--pergaminho-apagado);
+  color: var(--salvia);
 }
 
 @media (prefers-reduced-motion: reduce) {
