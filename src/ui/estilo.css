@@ -327,6 +327,35 @@ kbd {
   color: var(--salvia);
 }
 
+.aviso {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--texto);
+  background: rgba(227, 148, 134, 0.18);
+  border: 1px solid rgba(227, 148, 134, 0.45);
+  border-radius: 4px;
+}
+
+.depuracao {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  border: 1px dashed var(--ouro-tenue);
+  border-radius: 4px;
+}
+
+.depuracao strong {
+  font-weight: 700;
+  color: var(--ouro);
+}
+
 .dica {
   margin: auto 0 0;
   font-size: 0.85rem;

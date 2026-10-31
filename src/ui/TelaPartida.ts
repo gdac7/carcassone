@@ -1,8 +1,13 @@
 import Phaser from 'phaser';
 import { Cartela } from '../dominio/Cartela';
+import { Lado } from '../dominio/Lado';
+import { PontoBorda } from '../dominio/PontoBorda';
+import type { Segmento } from '../dominio/Segmento';
 import type { Jogador } from '../dominio/Jogador';
 import { MonteDeCartelas } from '../dominio/MonteDeCartelas';
 import { Posicao } from '../dominio/Posicao';
+import { Tabuleiro } from '../dominio/Tabuleiro';
+import { TipoTerreno } from '../dominio/TipoTerreno';
 import { COR_HEX, IMAGEM_POR_TIPO, MOVIMENTO_REDUZIDO, POSICAO_DO_PONTO, TAMANHO_CARTELA } from './aparencia';
 import { som } from './Som';
 
@@ -10,11 +15,23 @@ const DURACAO = MOVIMENTO_REDUZIDO ? 0 : 180;
 const ZOOM_MIN = 0.35;
 const ZOOM_MAX = 2;
 const DISTANCIA_PARA_ARRASTAR = 5;
+const VERDE_SUAVE = 0x8fd19e;
+const VERMELHO_SUAVE = 0xe39486;
+const DURACAO_AVISO = 3500;
+const NOME_DO_TIPO: Record<TipoTerreno, string> = {
+    [TipoTerreno.ESTRADA]: 'Estrada',
+    [TipoTerreno.CIDADE]: 'Cidade',
+    [TipoTerreno.CAMPO]: 'Campo',
+    [TipoTerreno.MOSTEIRO]: 'Mosteiro',
+};
 
 // Provisório até a etapa 9: a cena usa o domínio diretamente; depois passará a observar o Jogo.
 export class TelaPartida extends Phaser.Scene {
     private monte = new MonteDeCartelas();
-    private cartelasNaMesa = new Map<string, Cartela>(); // até a etapa 7 (Tabuleiro)
+    private tabuleiro = new Tabuleiro();
+    // Só para desenhar: quem decide onde uma cartela cabe é o Tabuleiro.
+    private desenhadas = new Map<string, { posicao: Posicao; cartela: Cartela }>();
+    private validas = new Set<string>();
     private jogadores: Jogador[] = [];
     private pontuacaoExibida = new Map<Jogador, number>();
     private cartelaAtual: Cartela | null = null;
@@ -22,8 +39,12 @@ export class TelaPartida extends Phaser.Scene {
     private fantasma!: Phaser.GameObjects.Container;
     private fantasmaImagem!: Phaser.GameObjects.Image;
     private fantasmaBrasao!: Phaser.GameObjects.Image;
-    private casasLivres!: Phaser.GameObjects.Graphics;
+    private destaques: Phaser.GameObjects.Image[] = [];
+    private realceRegiao!: Phaser.GameObjects.Graphics;
+    private depuracao = false;
     private arrastando = false;
+    private casaSobMouse: Posicao | null = null;
+    private temporizadorAviso: number | undefined;
 
     constructor() {
         super('TelaPartida');
@@ -34,13 +55,17 @@ export class TelaPartida extends Phaser.Scene {
         this.jogadores = dados.jogadores;
         this.pontuacaoExibida = new Map();
         this.monte = new MonteDeCartelas();
-        this.cartelasNaMesa = new Map();
+        this.tabuleiro = new Tabuleiro();
+        this.desenhadas = new Map();
+        this.validas = new Set();
+        this.destaques = [];
+        this.depuracao = false;
         this.cartelaAtual = null;
     }
 
     create(): void {
         document.getElementById('painel')!.hidden = false;
-        this.casasLivres = this.add.graphics();
+        this.realceRegiao = this.add.graphics().setDepth(5);
         this.fantasmaImagem = this.add.image(0, 0, '__DEFAULT');
         this.fantasmaBrasao = this.add.image(0, 0, 'brasao').setScale(0.6).setVisible(false);
         this.fantasma = this.add.container(0, 0, [this.fantasmaImagem, this.fantasmaBrasao])
@@ -48,7 +73,9 @@ export class TelaPartida extends Phaser.Scene {
 
         this.monte.criarCartelasPadrao();
         this.monte.embaralhar();
-        this.colocarNaMesa(this.monte.retirarCartelaInicial(), new Posicao(0, 0), false);
+        const inicial = this.monte.retirarCartelaInicial();
+        this.tabuleiro.colocarCartela(inicial, new Posicao(0, 0));
+        this.desenharCartela(inicial, new Posicao(0, 0), false);
 
         this.centralizarNaAreaVisivel();
         this.manterCentroAoRedimensionar();
@@ -56,6 +83,7 @@ export class TelaPartida extends Phaser.Scene {
         this.configurarColocacao();
         this.configurarGiros();
         this.configurarAjuda();
+        this.configurarDepuracao();
 
         this.puxarCartela();
         this.exibirPlacar();
@@ -94,14 +122,55 @@ export class TelaPartida extends Phaser.Scene {
         dialogo.scrollTop = 0; // o foco vai para o botão do fim e rolaria o texto até lá
     }
 
+    destacarPosicoesValidas(posicoes: Posicao[]): void {
+        this.validas = new Set(posicoes.map((p) => p.chave()));
+        this.destaques.forEach((d) => d.destroy());
+        this.destaques = this.casasLivresEncostadas().map((casa) =>
+            this.add.image(casa.getX() * TAMANHO_CARTELA, casa.getY() * TAMANHO_CARTELA, 'destaque'));
+        this.pintarDestaques();
+    }
+
+    // Verde: cabe assim como está. Verde apagado: cabe girando. Vermelho: não cabe de jeito nenhum.
+    private pintarDestaques(): void {
+        for (const destaque of this.destaques) {
+            const casa = new Posicao(destaque.x / TAMANHO_CARTELA, destaque.y / TAMANHO_CARTELA);
+            if (this.cartelaAtual && this.tabuleiro.podeColocar(this.cartelaAtual, casa)) {
+                destaque.setTint(VERDE_SUAVE).setAlpha(0.85);
+            } else if (this.validas.has(casa.chave())) {
+                destaque.setTint(VERDE_SUAVE).setAlpha(0.3);
+            } else {
+                destaque.setTint(VERMELHO_SUAVE).setAlpha(0.45);
+            }
+        }
+    }
+
+    // Puxa até sair uma cartela que caiba em algum lugar; as outras são descartadas.
     private puxarCartela(): void {
-        this.cartelaAtual = this.monte.estaVazio() ? null : this.monte.puxarCartela();
+        this.cartelaAtual = null;
+        const descartadas: string[] = [];
+        while (!this.monte.estaVazio()) {
+            const cartela = this.monte.puxarCartela();
+            const posicoes = this.tabuleiro.posicoesValidas(cartela);
+            if (posicoes.length > 0) {
+                this.cartelaAtual = cartela;
+                this.destacarPosicoesValidas(posicoes);
+                break;
+            }
+            descartadas.push(cartela.getId());
+        }
+        if (!this.cartelaAtual) this.destacarPosicoesValidas([]);
+        if (descartadas.length > 0) {
+            const nomes = descartadas.join(', ');
+            this.avisar(descartadas.length === 1
+                ? `A cartela ${nomes} não cabia em lugar nenhum e foi descartada.`
+                : `As cartelas ${nomes} não cabiam em lugar nenhum e foram descartadas.`);
+        }
         this.atualizarCartelaDaVez(0);
         this.fantasma.setVisible(false);
     }
 
-    private colocarNaMesa(cartela: Cartela, posicao: Posicao, animar: boolean): void {
-        this.cartelasNaMesa.set(posicao.chave(), cartela);
+    private desenharCartela(cartela: Cartela, posicao: Posicao, animar: boolean): void {
+        this.desenhadas.set(posicao.chave(), { posicao, cartela });
 
         const x = posicao.getX() * TAMANHO_CARTELA;
         const y = posicao.getY() * TAMANHO_CARTELA;
@@ -119,29 +188,18 @@ export class TelaPartida extends Phaser.Scene {
             peca.setScale(1.12).setAlpha(0);
             this.tweens.add({ targets: peca, scale: 1, alpha: 1, duration: DURACAO, ease: 'Quad.Out' });
         }
-        this.desenharCasasLivres();
     }
 
-    // Contorno discreto nas casas vazias vizinhas às cartelas já colocadas.
-    private desenharCasasLivres(): void {
+    // Casas vazias encostadas nas cartelas desenhadas: recebem o destaque verde ou vermelho.
+    private casasLivresEncostadas(): Posicao[] {
         const livres = new Map<string, Posicao>();
-        for (const chave of this.cartelasNaMesa.keys()) {
-            const [x, y] = chave.split(',').map(Number);
-            for (const vizinha of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
-                const p = new Posicao(vizinha[0], vizinha[1]);
-                if (!this.cartelasNaMesa.has(p.chave())) livres.set(p.chave(), p);
+        for (const { posicao } of this.desenhadas.values()) {
+            for (const lado of [Lado.NORTE, Lado.LESTE, Lado.SUL, Lado.OESTE]) {
+                const vizinha = posicao.vizinha(lado);
+                if (!this.desenhadas.has(vizinha.chave())) livres.set(vizinha.chave(), vizinha);
             }
         }
-
-        const margem = 6;
-        this.casasLivres.clear().lineStyle(1, 0xc8a66a, 0.3);
-        for (const p of livres.values()) {
-            this.casasLivres.strokeRoundedRect(
-                p.getX() * TAMANHO_CARTELA - TAMANHO_CARTELA / 2 + margem,
-                p.getY() * TAMANHO_CARTELA - TAMANHO_CARTELA / 2 + margem,
-                TAMANHO_CARTELA - 2 * margem, TAMANHO_CARTELA - 2 * margem, 6,
-            );
-        }
+        return [...livres.values()];
     }
 
     // O painel cobre parte do tabuleiro: a cartela inicial fica no centro do que sobra visível.
@@ -186,6 +244,7 @@ export class TelaPartida extends Phaser.Scene {
                 }
             }
             this.mostrarFantasma(ponteiro);
+            if (this.depuracao) this.realcarRegiaoSob(ponteiro);
         });
 
         // Aproxima mantendo fixo o ponto do tabuleiro que está sob o mouse.
@@ -206,9 +265,23 @@ export class TelaPartida extends Phaser.Scene {
         this.input.on('pointerup', (ponteiro: Phaser.Input.Pointer) => {
             if (this.arrastando || !this.cartelaAtual) return;
             const casa = this.casaSob(ponteiro);
-            if (this.cartelasNaMesa.has(casa.chave())) return;
+            if (this.desenhadas.has(casa.chave())) return;
 
-            this.colocarNaMesa(this.cartelaAtual, casa, true);
+            if (!this.casasLivresEncostadas().some((livre) => livre.igual(casa))) {
+                this.recusar('A cartela precisa encostar em outra pelo lado.');
+                return;
+            }
+            if (!this.validas.has(casa.chave())) {
+                this.recusar('A cartela não encaixa nesta casa em nenhuma rotação.');
+                return;
+            }
+            if (!this.tabuleiro.podeColocar(this.cartelaAtual, casa)) {
+                this.recusar('Nesta casa ela só encaixa girada. Use Q ou E.');
+                return;
+            }
+            this.tabuleiro.colocarCartela(this.cartelaAtual, casa);
+
+            this.desenharCartela(this.cartelaAtual, casa, true);
             som.tocarColocar();
             this.puxarCartela();
         });
@@ -240,6 +313,8 @@ export class TelaPartida extends Phaser.Scene {
             for (let i = 0; i < vezes; i++) this.cartelaAtual.girar();
             som.tocarGirar();
             this.atualizarCartelaDaVez(vezes === 1 ? -90 : 90);
+            this.pintarDestaques();
+            this.pintarFantasma();
         };
 
         document.getElementById('girar-direita')!.onclick = () => girar(1);
@@ -293,10 +368,89 @@ export class TelaPartida extends Phaser.Scene {
 
     private mostrarFantasma(ponteiro: Phaser.Input.Pointer): void {
         const casa = this.casaSob(ponteiro);
-        const livre = this.cartelaAtual !== null && !this.cartelasNaMesa.has(casa.chave());
+        this.casaSobMouse = casa;
+        const livre = this.cartelaAtual !== null && !this.desenhadas.has(casa.chave());
         this.fantasma
             .setVisible(livre)
             .setPosition(casa.getX() * TAMANHO_CARTELA, casa.getY() * TAMANHO_CARTELA);
+        this.pintarFantasma();
+    }
+
+    // A prévia fica avermelhada quando a cartela, do jeito que está girada, não encaixa na casa.
+    private pintarFantasma(): void {
+        const casa = this.casaSobMouse;
+        if (this.cartelaAtual && casa && this.tabuleiro.podeColocar(this.cartelaAtual, casa)) {
+            this.fantasmaImagem.clearTint();
+        } else {
+            this.fantasmaImagem.setTint(VERMELHO_SUAVE);
+        }
+    }
+
+    private recusar(mensagem: string): void {
+        this.avisar(mensagem);
+        if (DURACAO > 0) {
+            this.tweens.add({ targets: this.fantasma, x: this.fantasma.x + 6, duration: 50, yoyo: true, repeat: 2 });
+        }
+    }
+
+    private avisar(mensagem: string): void {
+        const aviso = document.getElementById('aviso')!;
+        aviso.textContent = mensagem;
+        aviso.hidden = false;
+        window.clearTimeout(this.temporizadorAviso);
+        this.temporizadorAviso = window.setTimeout(() => (aviso.hidden = true), DURACAO_AVISO);
+    }
+
+    // Tecla D: ao passar o mouse sobre uma cartela, realça a região do segmento mais próximo.
+    private configurarDepuracao(): void {
+        const indicador = document.getElementById('depuracao')!;
+        indicador.hidden = true;
+        this.input.keyboard?.on('keydown-D', () => {
+            if (algumDialogoAberto()) return;
+            this.depuracao = !this.depuracao;
+            indicador.hidden = !this.depuracao;
+            if (!this.depuracao) this.realceRegiao.clear();
+        });
+        this.events.once('shutdown', () => (indicador.hidden = true));
+    }
+
+    private realcarRegiaoSob(ponteiro: Phaser.Input.Pointer): void {
+        this.realceRegiao.clear();
+        const casa = this.casaSob(ponteiro);
+        const item = this.desenhadas.get(casa.chave());
+        const texto = document.getElementById('depuracao-regiao')!;
+        if (!item) {
+            texto.textContent = 'Passe o mouse sobre uma cartela.';
+            return;
+        }
+
+        const segmento = segmentoMaisProximo(item.cartela, this.cameras.main.getWorldPoint(ponteiro.x, ponteiro.y), casa);
+        const tipo = NOME_DO_TIPO[segmento.getTipo()];
+        if (segmento.getTipo() !== TipoTerreno.ESTRADA && segmento.getTipo() !== TipoTerreno.CIDADE) {
+            texto.textContent = `${tipo}: campos e mosteiros ainda não formam regiões.`;
+            return;
+        }
+
+        const regiao = this.tabuleiro.regiaoDe(segmento);
+        const cartelas = regiao.numCartelasDistintas();
+        texto.textContent = `${tipo} · ${cartelas} ${cartelas === 1 ? 'cartela' : 'cartelas'} · `
+            + `${regiao.estaConcluida() ? 'concluída' : 'aberta'}${regiao.estaOcupada() ? ' · com seguidor' : ''}`;
+
+        const cor = regiao.estaConcluida() ? VERDE_SUAVE : 0xc8a66a;
+        for (const seg of regiao.getSegmentos()) {
+            const posicao = [...this.desenhadas.values()].find((d) => d.cartela === seg.getCartela())!.posicao;
+            const cx = posicao.getX() * TAMANHO_CARTELA;
+            const cy = posicao.getY() * TAMANHO_CARTELA;
+            this.realceRegiao.lineStyle(3, cor, 0.9)
+                .strokeRect(cx - TAMANHO_CARTELA / 2 + 2, cy - TAMANHO_CARTELA / 2 + 2, TAMANHO_CARTELA - 4, TAMANHO_CARTELA - 4);
+            for (const ponto of seg.pontosAtuais()) {
+                const [px, py] = POSICAO_DO_PONTO[String(ponto)];
+                const x = cx + px * TAMANHO_CARTELA * 0.85;
+                const y = cy + py * TAMANHO_CARTELA * 0.85;
+                this.realceRegiao.fillStyle(cor, 1).fillCircle(x, y, 6)
+                    .lineStyle(2, 0x2b2f33, 1).strokeCircle(x, y, 6);
+            }
+        }
     }
 
     private casaSob(ponteiro: Phaser.Input.Pointer): Posicao {
@@ -308,6 +462,26 @@ export class TelaPartida extends Phaser.Scene {
 // Com um diálogo aberto, as teclas do jogo não devem agir no tabuleiro por trás dele.
 function algumDialogoAberto(): boolean {
     return document.querySelector('dialog[open]') !== null;
+}
+
+// O ponto de borda mais perto do mouse escolhe o segmento; no miolo de um mosteiro, o próprio mosteiro.
+function segmentoMaisProximo(cartela: Cartela, mouse: Phaser.Math.Vector2, casa: Posicao): Segmento {
+    const dx = (mouse.x - casa.getX() * TAMANHO_CARTELA) / TAMANHO_CARTELA;
+    const dy = (mouse.y - casa.getY() * TAMANHO_CARTELA) / TAMANHO_CARTELA;
+    const mosteiro = cartela.getSegmentos().find((s) => s.getTipo() === TipoTerreno.MOSTEIRO);
+    if (mosteiro && Math.hypot(dx, dy) < 0.2) return mosteiro;
+
+    let maisPerto = PontoBorda.N;
+    let menorDistancia = Infinity;
+    for (const ponto of Lado.NORTE.pontos().concat(Lado.LESTE.pontos(), Lado.SUL.pontos(), Lado.OESTE.pontos())) {
+        const [px, py] = POSICAO_DO_PONTO[String(ponto)];
+        const distancia = Math.hypot(dx - px, dy - py);
+        if (distancia < menorDistancia) {
+            menorDistancia = distancia;
+            maisPerto = ponto;
+        }
+    }
+    return cartela.segmentoNoPonto(maisPerto);
 }
 
 function chaveDaImagem(cartela: Cartela): string {
