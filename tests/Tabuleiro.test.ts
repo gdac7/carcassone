@@ -96,6 +96,25 @@ describe('Tabuleiro.colocarCartela', () => {
   });
 });
 
+describe('Tabuleiro.podeColocar', () => {
+  test('responde pela rotação atual, sem colocar a cartela', () => {
+    const t = comInicial();
+    const e = cartela('E'); // cidade no norte: não encosta na cidade de D pelo sul
+    expect(t.podeColocar(e, new Posicao(0, -1))).toBe(false);
+    e.girar();
+    e.girar(); // cidade no sul
+    expect(t.podeColocar(e, new Posicao(0, -1))).toBe(true);
+    expect(t.vizinhas(new Posicao(0, 0))).toEqual([]); // nada foi colocado
+  });
+
+  test('casa ocupada, isolada ou só na diagonal: não pode', () => {
+    const t = comInicial();
+    expect(t.podeColocar(cartela('C'), new Posicao(0, 0))).toBe(false);
+    expect(t.podeColocar(cartela('B'), new Posicao(0, 2))).toBe(false);
+    expect(t.podeColocar(cartela('B'), new Posicao(1, 1))).toBe(false);
+  });
+});
+
 describe('Tabuleiro.vizinhas', () => {
   test('devolve as cartelas encostadas nos 4 lados', () => {
     const t = comInicial();

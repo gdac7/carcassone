@@ -21,7 +21,7 @@ export class Tabuleiro {
 
     // A primeira cartela (a inicial) entra em qualquer posição; as demais precisam caber.
     colocarCartela(c: Cartela, p: Posicao): boolean {
-        if (this.cartelasPorPosicao.size > 0 && !this.cabe(c, p)) return false;
+        if (this.cartelasPorPosicao.size > 0 && !this.podeColocar(c, p)) return false;
         this.cartelasPorPosicao.set(p.chave(), { posicao: p, cartela: c });
         this.atualizarRegioes(c, p);
         return true;
@@ -34,7 +34,7 @@ export class Tabuleiro {
             let cabeEmAlguma = false;
             // Gira sempre 4 vezes: assim a cartela termina na rotação em que começou.
             for (let i = 0; i < 4; i++) {
-                if (this.cabe(c, candidata)) cabeEmAlguma = true;
+                if (this.podeColocar(c, candidata)) cabeEmAlguma = true;
                 c.girar();
             }
             if (cabeEmAlguma) validas.push(candidata);
@@ -69,7 +69,7 @@ export class Tabuleiro {
 
     // Casa livre, encostada em pelo menos uma cartela e combinando com todas as vizinhas,
     // na rotação atual de `c`.
-    private cabe(c: Cartela, p: Posicao): boolean {
+    podeColocar(c: Cartela, p: Posicao): boolean {
         if (this.cartelasPorPosicao.has(p.chave())) return false;
 
         let encostou = false;

@@ -47,6 +47,11 @@
           </div>
           <p class="atalho">Teclas: <kbd>Q</kbd> gira para a esquerda, <kbd>E</kbd> para a direita.</p>
           <p id="monte" class="monte"></p>
+          <p id="aviso" class="aviso" role="status" hidden></p>
+          <p id="depuracao" class="depuracao" hidden>
+            <strong>Depuração</strong>
+            <span id="depuracao-regiao">Passe o mouse sobre uma cartela.</span>
+          </p>
         </section>
 
         <section class="jogadores" aria-labelledby="jogadores-titulo">
@@ -54,7 +59,7 @@
           <ol id="lista-jogadores" class="lista-jogadores"></ol>
         </section>
 
-        <p class="dica">Clique numa casa para colocar a cartela. Arraste o tabuleiro para mover e use a roda do mouse para aproximar.</p>
+        <p class="dica">Clique numa casa verde para colocar a cartela. Arraste o tabuleiro para mover e use a roda do mouse para aproximar.</p>
       </aside>
     </main>
 
@@ -130,6 +135,7 @@
         <li><kbd>Q</kbd> <kbd>E</kbd> giram a cartela</li>
         <li>Arraste para mover o tabuleiro; a roda do mouse aproxima</li>
         <li><kbd>H</kbd> abre esta ajuda</li>
+        <li><kbd>D</kbd> liga a depuração: realça a região sob o mouse</li>
       </ul>
 
       <div class="acoes">

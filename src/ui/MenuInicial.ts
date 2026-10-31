@@ -22,6 +22,7 @@ export class MenuInicial extends Phaser.Scene {
             }
         }
         this.load.image('brasao', 'emblem.png');
+        this.load.image('destaque', 'highlight.png');
     }
 
     create(): void {
