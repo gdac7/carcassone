@@ -1,0 +1,15 @@
+# Carcassonne
+
+Versão digital do jogo de tabuleiro Carcassonne, feita como trabalho da disciplina Projeto de Software.
+
+## Créditos
+
+As imagens em `public/` (cartelas, meeples, ícones, brasão e destaque) vêm do projeto
+[tsaglam/Carcassonne](https://github.com/tsaglam/Carcassonne), distribuído sob a
+[Eclipse Public License 2.0](https://github.com/tsaglam/Carcassonne/blob/master/LICENSE).
+
+A música tema, "Minstrel Guild", é de Kevin MacLeod ([incompetech.com](https://incompetech.com)), licenciada sob
+[Creative Commons BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+
+O jogo Carcassonne foi criado por Klaus-Jürgen Wrede.

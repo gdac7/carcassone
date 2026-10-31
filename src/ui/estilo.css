@@ -1,0 +1,812 @@
+:root {
+  /* Paleta */
+  --carvao: #2b2f33;
+  --petroleo: #1f4f4a;
+  --petroleo-claro: #2f7c77;
+  --salvia: #a8b8b0;
+  --ouro: #c8a66a;
+
+  /* Derivadas da paleta */
+  --texto: #eef1ee;
+  --petroleo-fundo: #234543;
+  --ouro-claro: #d6b87f;
+  --ouro-tenue: rgba(200, 166, 106, 0.35);
+  --realce: rgba(47, 124, 119, 0.35);
+  --linha: rgba(168, 184, 176, 0.15);
+
+  --fonte: 'Alegreya', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+html {
+  scrollbar-color: var(--ouro-tenue) transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--carvao);
+  color: var(--texto);
+  font-family: var(--fonte);
+}
+
+.mesa {
+  height: 100vh;
+}
+
+/* O tabuleiro ocupa a tela toda; o painel fica por cima, à direita, como uma bandeja sobre a mesa. */
+.tabuleiro {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.tabuleiro:active {
+  cursor: grabbing;
+}
+
+/* Painel lateral */
+
+.painel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 28px 26px;
+  overflow-y: auto;
+  background: var(--petroleo);
+  border-left: 1px solid var(--ouro-tenue);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icones-cabecalho {
+  display: flex;
+  gap: 4px;
+}
+
+.botao-icone {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.botao-icone svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--salvia);
+  transition: fill 120ms ease;
+}
+
+.botao-icone:hover {
+  background: var(--realce);
+}
+
+.botao-icone:hover svg {
+  fill: var(--ouro);
+}
+
+.botao-icone:focus-visible {
+  outline: 2px solid var(--ouro);
+  outline-offset: 2px;
+}
+
+.titulo {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ouro);
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--salvia);
+}
+
+/* Cartela da vez */
+
+.moldura {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+  padding: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--petroleo-fundo);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 6px;
+}
+
+.cartela-atual {
+  width: 156px;
+  height: 156px;
+  border-radius: 2px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+.brasao-atual {
+  position: absolute;
+  width: 22px;
+  pointer-events: none;
+  translate: -50% -50%;
+}
+
+.giros {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.botao-giro {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 80ms ease;
+}
+
+.botao-giro:hover {
+  background: var(--realce);
+}
+
+.botao-giro:active {
+  transform: scale(0.94);
+}
+
+.botao-giro:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.botao-giro:focus-visible {
+  outline: 2px solid var(--ouro);
+  outline-offset: 3px;
+}
+
+/* Os ícones originais são verdes; a máscara os redesenha em ouro. */
+.icone {
+  width: 20px;
+  height: 20px;
+  background: var(--ouro);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+.icone-esquerda {
+  mask-image: url('/icons/left.png');
+}
+
+.icone-direita {
+  mask-image: url('/icons/right.png');
+}
+
+.atalho {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--salvia);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 4px;
+  font-family: var(--fonte);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--texto);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 3px;
+}
+
+.monte {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--salvia);
+}
+
+/* Jogadores */
+
+.lista-jogadores {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jogador {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+
+.jogador.da-vez {
+  background: var(--realce);
+  border-left-color: var(--ouro);
+}
+
+.meeple {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: var(--cor-jogador);
+  mask-image: url('/meeple/meeple_road_template.png');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+.jogador .meeple {
+  grid-row: span 2;
+}
+
+.jogador .nome {
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.jogador .pontos {
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.jogador .pontos small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--salvia);
+}
+
+/* Destaca a pontuação que acabou de subir. */
+.jogador .pontos.subiu {
+  animation: subir 600ms ease-out;
+}
+
+@keyframes subir {
+  30% {
+    color: var(--ouro);
+    transform: scale(1.15);
+  }
+}
+
+.jogador .reserva {
+  font-size: 0.85rem;
+  color: var(--salvia);
+}
+
+.aviso {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--texto);
+  background: rgba(227, 148, 134, 0.18);
+  border: 1px solid rgba(227, 148, 134, 0.45);
+  border-radius: 4px;
+}
+
+.aviso.informativo {
+  background: var(--realce);
+  border-color: var(--petroleo-claro);
+}
+
+.fase-seguidor {
+  margin: 12px 0 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 4px;
+}
+
+.fase-seguidor p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.fase-seguidor .botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  font-size: 1rem;
+}
+
+.icone-pular {
+  width: 16px;
+  height: 16px;
+  mask-image: url('/icons/skip.png');
+}
+
+.depuracao {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  border: 1px dashed var(--ouro-tenue);
+  border-radius: 4px;
+}
+
+.depuracao strong {
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.vez {
+  margin: -12px 0 -8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.lista-registro {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.lista-registro li {
+  padding-left: 10px;
+  border-left: 3px solid var(--cor-jogador, var(--linha));
+}
+
+.lista-registro .registro-vazio {
+  color: var(--salvia);
+  border-left-color: transparent;
+}
+
+.acoes-partida {
+  display: flex;
+  gap: 10px;
+}
+
+.acoes-partida .botao {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 1rem;
+}
+
+.resultado-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resultado-lista li {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+.resultado-lista li.vencedor {
+  background: var(--realce);
+  border-left: 3px solid var(--ouro);
+}
+
+.resultado-lista .nome {
+  font-weight: 500;
+}
+
+.resultado-lista .pontos {
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.dica {
+  margin: auto 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--salvia);
+}
+
+/* Menu inicial */
+
+.menu {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.cartao-menu {
+  width: min(460px, 100%);
+  padding: 44px 48px 40px;
+  text-align: center;
+  background: rgba(31, 79, 74, 0.94);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: surgir 260ms ease-out;
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.titulo-menu {
+  margin: 0;
+  font-size: clamp(2.75rem, 7vw, 4rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ouro);
+}
+
+.titulo-secao {
+  margin: 0 0 20px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.acoes-lado-a-lado {
+  flex-direction: row;
+}
+
+.acoes-lado-a-lado .botao-principal {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.botao {
+  padding: 12px 28px;
+  font-size: 1.15rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.botao:active {
+  transform: scale(0.98);
+}
+
+.botao:focus-visible {
+  outline: 2px solid var(--ouro);
+  outline-offset: 3px;
+}
+
+.botao-principal {
+  color: var(--carvao);
+  background: var(--ouro);
+  border: 1px solid var(--ouro);
+}
+
+.botao-principal:hover {
+  background: var(--ouro-claro);
+}
+
+.botao-secundario {
+  background: transparent;
+  border: 1px solid var(--ouro-tenue);
+}
+
+.botao-secundario:hover {
+  border-color: var(--ouro);
+  background: var(--realce);
+}
+
+.quantidade {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.quantidade legend {
+  width: 100%;
+  margin-bottom: 12px;
+  color: var(--salvia);
+}
+
+.quantidade input {
+  position: absolute;
+  opacity: 0;
+}
+
+.quantidade span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.quantidade span:hover {
+  background: var(--realce);
+}
+
+.quantidade input:checked + span {
+  color: var(--carvao);
+  background: var(--ouro);
+  border-color: var(--ouro);
+}
+
+.quantidade input:focus-visible + span {
+  outline: 2px solid var(--ouro);
+  outline-offset: 3px;
+}
+
+.nomes-jogadores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nomes-jogadores li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nomes-jogadores input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 1.05rem;
+  background: var(--petroleo-fundo);
+  border: 1px solid var(--linha);
+  border-radius: 4px;
+}
+
+.nomes-jogadores select {
+  padding: 8px 6px;
+  font-size: 0.95rem;
+  color: var(--texto);
+  background: var(--petroleo-fundo);
+  border: 1px solid var(--linha);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.nomes-jogadores select:focus-visible {
+  outline: none;
+  border-color: var(--ouro);
+}
+
+.nomes-jogadores input::placeholder {
+  color: var(--salvia);
+  opacity: 0.7;
+}
+
+.nomes-jogadores input:focus-visible {
+  outline: none;
+  border-color: var(--ouro);
+}
+
+/* Configurações */
+
+.dialogo {
+  width: min(400px, calc(100% - 32px));
+  padding: 32px 36px;
+  color: var(--texto);
+  background: var(--petroleo);
+  border: 1px solid var(--ouro-tenue);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.dialogo::backdrop {
+  background: rgba(43, 47, 51, 0.7);
+}
+
+.controle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.controle input {
+  accent-color: var(--ouro);
+  cursor: pointer;
+}
+
+.dialogo .acoes {
+  margin-top: 24px;
+}
+
+/* Ajuda */
+
+.dialogo-ajuda {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.dialogo-ajuda h3 {
+  margin: 24px 0 10px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.dialogo-ajuda h3:first-of-type {
+  margin-top: 0;
+}
+
+.passos,
+.controles {
+  margin: 0;
+  padding-left: 1.25em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.45;
+}
+
+.tabela-rolagem {
+  overflow-x: auto;
+}
+
+.tabela-pontos {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.tabela-pontos th,
+.tabela-pontos td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--linha);
+}
+
+.tabela-pontos thead th {
+  font-weight: 500;
+  color: var(--salvia);
+  border-bottom-color: var(--ouro-tenue);
+}
+
+.tabela-pontos tbody th {
+  font-weight: 700;
+}
+
+/* No celular, cada zona vira um bloco com os rótulos ao lado dos valores. */
+@media (max-width: 560px) {
+  .tabela-pontos {
+    min-width: 0;
+  }
+
+  .tabela-pontos thead {
+    display: none;
+  }
+
+  .tabela-pontos tr {
+    display: block;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--linha);
+  }
+
+  .tabela-pontos th,
+  .tabela-pontos td {
+    display: block;
+    padding: 2px 0;
+    border: none;
+  }
+
+  .tabela-pontos td::before {
+    content: attr(data-rotulo) ': ';
+    color: var(--salvia);
+  }
+}
+
+.nota {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--salvia);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cartao-menu,
+  .jogador .pontos.subiu {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .painel {
+    top: auto;
+    left: 0;
+    width: auto;
+    max-height: 45vh;
+    border-left: none;
+    border-top: 1px solid var(--ouro-tenue);
+  }
+}
