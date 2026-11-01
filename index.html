@@ -52,10 +52,15 @@
           <p id="aviso" class="aviso" role="status" hidden></p>
           <div id="fase-seguidor" class="fase-seguidor" hidden>
             <p id="fase-seguidor-texto">Coloque um seguidor na cartela ou pule.</p>
-            <button id="pular" class="botao botao-secundario" type="button" title="Pular (Espaço)">
-              <span class="icone icone-pular" aria-hidden="true"></span>
-              Pular
-            </button>
+            <div class="acoes-seguidor">
+              <button id="voltar-cartela" class="botao botao-secundario" type="button" title="Voltar e escolher outra casa (Esc)">
+                Voltar
+              </button>
+              <button id="pular" class="botao botao-secundario" type="button" title="Pular (Espaço)">
+                <span class="icone icone-pular" aria-hidden="true"></span>
+                Pular
+              </button>
+            </div>
           </div>
           <p id="depuracao" class="depuracao" hidden>
             <strong>Depuração</strong>
@@ -164,7 +169,7 @@
       <ul class="controles">
         <li><kbd>Q</kbd> <kbd>E</kbd> giram a cartela</li>
         <li>Arraste para mover o tabuleiro; a roda do mouse aproxima</li>
-        <li>Depois de colocar a cartela, clique num círculo para pôr um seguidor; <kbd>Espaço</kbd> pula</li>
+        <li>Depois de colocar a cartela, clique num círculo para pôr um seguidor; <kbd>Espaço</kbd> pula e <kbd>Esc</kbd> volta para escolher outra casa</li>
         <li><kbd>H</kbd> abre esta ajuda</li>
       </ul>
 
