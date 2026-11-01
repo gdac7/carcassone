@@ -60,7 +60,8 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
     // Na vez da IA, e entre um aviso e outro do Jogo, a tela fica esperando.
     private fase: 'cartela' | 'seguidor' | 'espera' = 'espera';
     // Cartela que o humano já pôs na mesa, mas que só vai para o Jogo junto com a escolha do seguidor.
-    private pendente: { cartela: Cartela; posicao: Posicao } | null = null;
+    // Até lá ele pode voltar atrás: basta apagar o desenho (`peca`).
+    private pendente: { cartela: Cartela; posicao: Posicao; peca: Phaser.GameObjects.Container } | null = null;
     private opcoesSeguidor: Phaser.GameObjects.GameObject[] = [];
     private seguidores: { segmento: Segmento; imagem: Phaser.GameObjects.Container }[] = [];
     private jogadasExibidas = 0;
@@ -363,7 +364,7 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
         }));
     }
 
-    private desenharCartela(cartela: Cartela, posicao: Posicao, animar: boolean): void {
+    private desenharCartela(cartela: Cartela, posicao: Posicao, animar: boolean): Phaser.GameObjects.Container {
         this.desenhadas.set(posicao.chave(), { posicao, cartela });
 
         const x = posicao.getX() * TAMANHO_CARTELA;
@@ -382,6 +383,7 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
             peca.setScale(1.12).setAlpha(0);
             this.tweens.add({ targets: peca, scale: 1, alpha: 1, duration: DURACAO, ease: 'Quad.Out' });
         }
+        return peca;
     }
 
     // Casas vazias encostadas nas cartelas desenhadas: recebem o destaque verde ou vermelho.
@@ -475,8 +477,7 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
                 return;
             }
 
-            this.pendente = { cartela, posicao: casa };
-            this.desenharCartela(cartela, casa, true);
+            this.pendente = { cartela, posicao: casa, peca: this.desenharCartela(cartela, casa, true) };
             som.tocarColocar();
             this.iniciarFaseSeguidor(cartela, casa);
         });
@@ -484,36 +485,42 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
 
     private configurarSeguidor(): void {
         const pular = document.getElementById('pular')!;
+        const voltar = document.getElementById('voltar-cartela')!;
         const aoPular = () => {
             if (this.fase === 'seguidor') this.confirmarJogada(null);
         };
+        const aoVoltar = () => this.voltarCartela();
         pular.addEventListener('click', aoPular);
+        voltar.addEventListener('click', aoVoltar);
         this.input.keyboard?.on('keydown-SPACE', () => {
             if (!algumDialogoAberto()) aoPular();
         });
+        this.input.keyboard?.on('keydown-ESC', () => {
+            if (!algumDialogoAberto()) aoVoltar();
+        });
         this.events.once('shutdown', () => {
             pular.removeEventListener('click', aoPular);
+            voltar.removeEventListener('click', aoVoltar);
             document.getElementById('fase-seguidor')!.hidden = true;
         });
     }
 
     // Um círculo em cada segmento da cartela colocada; os de zona já ocupada ficam apagados.
     // A cartela ainda não está no Tabuleiro: regioesQueSeLigam diz em que zonas cada segmento vai entrar.
+    // Sem seguidores na reserva, a fase continua (sem círculos) para o jogador ainda poder voltar.
     private iniciarFaseSeguidor(cartela: Cartela, casa: Posicao): void {
         const jogador = this.jogo.getJogadorDaVez()!;
-        if (jogador.getQuantidadeNaReserva() === 0) {
-            this.avisar(`${jogador.getNome()} não tem seguidores na reserva.`);
-            this.confirmarJogada(null);
-            return;
-        }
+        const temSeguidor = jogador.getQuantidadeNaReserva() > 0;
 
         this.fase = 'seguidor';
         this.fantasma.setVisible(false);
         this.limparDestaques();
         this.habilitarGiros(false);
-        document.getElementById('fase-seguidor-texto')!.textContent =
-            `${jogador.getNome()}, coloque um seguidor na cartela ou pule.`;
+        document.getElementById('fase-seguidor-texto')!.textContent = temSeguidor
+            ? `${jogador.getNome()}, coloque um seguidor na cartela ou pule.`
+            : `${jogador.getNome()} não tem seguidores na reserva. Pule ou volte.`;
         document.getElementById('fase-seguidor')!.hidden = false;
+        if (!temSeguidor) return;
 
         const tabuleiro = this.jogo.getTabuleiro();
         for (const [segmento, [x, y]] of this.posicoesNaMesa(cartela, casa)) {
@@ -533,6 +540,22 @@ export class TelaPartida extends Phaser.Scene implements ObservadorJogo {
             }
             this.opcoesSeguidor.push(opcao);
         }
+    }
+
+    // Desfaz só o desenho: a cartela ainda não foi para o Jogo. O turno volta à escolha da casa.
+    private voltarCartela(): void {
+        const pendente = this.pendente;
+        if (!pendente || this.fase !== 'seguidor') return;
+        this.pendente = null;
+        this.opcoesSeguidor.forEach((o) => o.destroy());
+        this.opcoesSeguidor = [];
+        pendente.peca.destroy();
+        this.desenhadas.delete(pendente.posicao.chave());
+        document.getElementById('fase-seguidor')!.hidden = true;
+
+        this.fase = 'cartela';
+        this.habilitarGiros(true);
+        this.destacarPosicoesValidas(this.jogo.getTabuleiro().posicoesValidas(pendente.cartela));
     }
 
     // A jogada do humano vai inteira para o Jogo, que valida, coloca, pontua e avisa a tela.

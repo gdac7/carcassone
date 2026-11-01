@@ -362,6 +362,11 @@ kbd {
   line-height: 1.4;
 }
 
+.acoes-seguidor {
+  display: flex;
+  gap: 8px;
+}
+
 .fase-seguidor .botao {
   display: inline-flex;
   align-items: center;
