@@ -1,7 +1,7 @@
 {
   "name": "carcassone",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Versão digital do jogo de tabuleiro Carcassonne",
   "author": {
     "name": "Gabriel Campos, Júlia Staudohar, Júlia Vogel e Victor Miranda",
